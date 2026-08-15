@@ -129,14 +129,27 @@
    Encontras-os em: Firebase Console → Project Settings → General
    → "Your apps" → Web app → firebaseConfig
    ============================================================= */
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey:            "",   // <-- colar aqui
-  authDomain:        "",   // <-- ex: o-meu-projeto.firebaseapp.com
-  projectId:         "",   // <-- ex: o-meu-projeto
-  storageBucket:     "",   // <-- ex: o-meu-projeto.appspot.com
-  messagingSenderId: "",   // <-- número de 12 dígitos
-  appId:             ""    // <-- ex: 1:123456:web:abc123
+  apiKey: "AIzaSyAYGeVwWYxv4y_gcWlatIFO_P_v7yiVLTQ",
+  authDomain: "escala-cpo.firebaseapp.com",
+  projectId: "escala-cpo",
+  storageBucket: "escala-cpo.firebasestorage.app",
+  messagingSenderId: "357159211436",
+  appId: "1:357159211436:web:d4e92173958d1c405f6a09",
+  measurementId: "G-FVSMM3CYMB"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 const ADMIN_EMAILS = ["freitas89@outlook.pt, miguel.fonseca@prociv.pt, jose.requeijo@prociv.pt,celina.martins@prociv.pt, paulapfa41@hotmail.com"];  // <-- o teu email de administrador
 
