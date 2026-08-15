@@ -262,12 +262,7 @@ async function doLogin() {
   const pass  = document.getElementById("liPass").value;
   if (!email||!pass) { showLoginError("Preenche email e palavra-passe."); return; }
   try {
-    const cred = await auth.signInWithEmailAndPassword(email, pass);
-    if (!cred.user.emailVerified) {
-      await auth.signOut();
-      showLoginError("Confirma primeiro o email que recebeste antes de entrar.");
-      return;
-    }
+    await auth.signInWithEmailAndPassword(email, pass);
   } catch(e) { showLoginError("Email ou palavra-passe incorretos."); }
 }
 async function doLogout() {
@@ -304,7 +299,6 @@ async function createAccount() {
     const secAuth = getSecondaryAuth();
     const cred = await secAuth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: nome });
-    await cred.user.sendEmailVerification({ url: location.href });
     await secAuth.signOut();
     if (!DB.employees.find(e=>e.name.toLowerCase()===nome.toLowerCase())) {
       DB.employees.push({id:uid(), name:nome, email});
@@ -313,7 +307,7 @@ async function createAccount() {
     document.getElementById("acNome").value = "";
     document.getElementById("acEmail").value = "";
     document.getElementById("acPass").value = "";
-    hint.textContent = `Conta criada para ${nome}. Enviámos um email de confirmação para ${email}. Entrega-lhe também a palavra-passe inicial.`;
+    hint.textContent = `Conta criada para ${nome}. Entrega-lhe o email (${email}) e a palavra-passe inicial para entrar.`;
     renderEmpMgr();
   } catch(e) {
     if (/email-already-in-use/.test(e.code)) hint.textContent = "Já existe uma conta com esse email.";
@@ -407,7 +401,7 @@ function renderAdmin() {
     </div>
     <div class="card">
       <h3 style="margin:0 0 4px;font-size:15px;">Gestão de acessos</h3>
-      <p class="hint" style="margin-bottom:12px;">Cria a conta de cada operacional. Receberá um email de confirmação — só depois de confirmar consegue entrar.</p>
+      <p class="hint" style="margin-bottom:12px;">Cria a conta de cada operacional. Depois de criada, pode entrar de imediato com o email e palavra-passe que definires.</p>
       <div class="row grid2">
         <div><label>Nome do operacional</label><input id="acNome" placeholder="Nome a mostrar"></div>
         <div><label>Email</label><input id="acEmail" type="email" placeholder="email@exemplo.pt"></div>
@@ -539,7 +533,7 @@ if("serviceWorker" in navigator){
 (async function(){
   if (SHARED) {
     auth.onAuthStateChanged(async user => {
-      if (user && user.emailVerified) { await enterApp(user); }
+      if (user) { await enterApp(user); }
       else { showLogin(); }
     });
   } else {
