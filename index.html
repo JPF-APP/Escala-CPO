@@ -124,44 +124,34 @@
 
 <script>
 /* =============================================================
-   CONFIGURAÇÃO FIREBASE
-   Preenche os valores abaixo com os dados do teu projeto Firebase.
-   Encontras-os em: Firebase Console → Project Settings → General
-   → "Your apps" → Web app → firebaseConfig
+   CONFIGURAÇÃO FIREBASE — valores copiados do Firebase Console
    ============================================================= */
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAYGeVwWYxv4y_gcWlatIFO_P_v7yiVLTQ",
   authDomain: "escala-cpo.firebaseapp.com",
   projectId: "escala-cpo",
   storageBucket: "escala-cpo.firebasestorage.app",
   messagingSenderId: "357159211436",
-  appId: "1:357159211436:web:d4e92173958d1c405f6a09",
-  measurementId: "G-FVSMM3CYMB"
+  appId: "1:357159211436:web:d4e92173958d1c405f6a09"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-const ADMIN_EMAILS = ["freitas89@outlook.pt, miguel.fonseca@prociv.pt, jose.requeijo@prociv.pt,celina.martins@prociv.pt, paulapfa41@hotmail.com"];  // <-- o teu email de administrador
+const ADMIN_EMAILS = [
+  "freitas89@outlook.pt",
+  "miguel.fonseca@prociv.pt",
+  "jose.requeijo@prociv.pt",
+  "celina.martins@prociv.pt",
+  "paulapfa41@hotmail.com"
+];
 
 /* =============================================================
-   Inicialização Firebase
+   Inicialização Firebase (compat SDK — não usar import/require)
    ============================================================= */
 const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 const LS="cpo_escala_v1";
 
 let SHARED = false;
-let auth = null, db = null, authSecondary = null;
+let auth = null, db = null;
 
 try {
   if (firebaseConfig.apiKey && firebaseConfig.projectId) {
@@ -172,7 +162,6 @@ try {
   }
 } catch(e) { SHARED = false; }
 
-// App secundária (para criar contas sem fechar a sessão do admin)
 function getSecondaryAuth() {
   try {
     return firebase.app("secondary").auth();
@@ -204,7 +193,6 @@ function daysIn(m,y){ return new Date(y,m+1,0).getDate(); }
 function firstDow(m,y){ return new Date(y,m,1).getDay(); }
 function uid(){ return Math.random().toString(36).slice(2,9); }
 
-/* ---------- Firestore helpers ---------- */
 const DOC_ID = "cpo-main";
 
 async function pullShared() {
@@ -215,17 +203,13 @@ async function pullShared() {
     else { await pushShared(); }
   } catch(e) { toast("Sem ligação ao servidor — modo local."); SHARED = false; }
 }
-
 async function pushShared() {
   if (!SHARED) { saveLocal(); return; }
-  try {
-    await db.collection("app_state").doc(DOC_ID).set(DB);
-  } catch(e) { toast("Falha ao guardar no servidor."); }
+  try { await db.collection("app_state").doc(DOC_ID).set(DB); }
+  catch(e) { toast("Falha ao guardar no servidor."); }
 }
-
 async function persist() { if (SHARED) { await pushShared(); } else { saveLocal(); } }
 
-/* ---------- Estado da UI ---------- */
 let emp = { service:"cpo", name:"", sel:{} };
 const empView   = document.getElementById("empView");
 const adminView = document.getElementById("adminView");
@@ -246,9 +230,6 @@ function statusPill() {
     : `<span class="pill local">● Local (só este dispositivo)</span>`;
 }
 
-/* =============================================================
-   AUTENTICAÇÃO (Firebase Auth)
-   ============================================================= */
 let SESSION = null, IS_ADMIN = false;
 const elLogin    = document.getElementById("loginScreen");
 const elHeader   = document.getElementById("appHeader");
@@ -287,10 +268,7 @@ async function doLogin() {
       showLoginError("Confirma primeiro o email que recebeste antes de entrar.");
       return;
     }
-    // enterApp é chamado pelo onAuthStateChanged
-  } catch(e) {
-    showLoginError("Email ou palavra-passe incorretos.");
-  }
+  } catch(e) { showLoginError("Email ou palavra-passe incorretos."); }
 }
 async function doLogout() {
   await auth.signOut();
@@ -313,7 +291,6 @@ document.getElementById("liPass").addEventListener("keydown", e => { if(e.key===
 document.getElementById("logoutBtn").onclick = doLogout;
 document.getElementById("forgotLink").onclick = e => { e.preventDefault(); doForgot(); };
 
-/* ---------- Criar conta (admin) ---------- */
 async function createAccount() {
   const hint  = document.getElementById("acHint");
   const nome  = document.getElementById("acNome").value.trim();
@@ -344,9 +321,6 @@ async function createAccount() {
   }
 }
 
-/* =============================================================
-   VISTA OPERACIONAIS
-   ============================================================= */
 function renderEmp() {
   if (!DB.services.length) {
     empView.innerHTML=`<div class="card"><p>Ainda não há serviços configurados. Pede ao administrador.</p></div>`;
@@ -415,9 +389,6 @@ async function submitEmp() {
   emp.sel={}; renderEmp(); toast("Disponibilidade submetida. Obrigado!");
 }
 
-/* =============================================================
-   VISTA ADMINISTRADOR
-   ============================================================= */
 function renderAdmin() {
   const {month,year}=DB.period;
   adminView.innerHTML=`
@@ -479,7 +450,6 @@ function renderAdmin() {
   document.getElementById("impJson").onclick  = () => document.getElementById("impFile").click();
   document.getElementById("impFile").onchange = importJson;
   document.getElementById("resetAll").onclick = async () => { if(confirm("Apagar todos os dados?")){ DB=structuredClone(DEFAULT); await persist(); renderAdmin(); } };
-
   renderSvcList(); renderEmpMgr(); renderSubList();
 }
 
@@ -501,14 +471,12 @@ function renderSvcList() {
   el.querySelectorAll(".delT").forEach(b=>b.onclick=async()=>{const s=DB.services.find(x=>x.id===b.dataset.s); s.turnos=s.turnos.filter(t=>t.code!==b.dataset.c); await persist(); renderSvcList();});
   el.querySelectorAll(".addT").forEach(b=>b.onclick=async()=>{const code=prompt("Código do turno:"); if(!code)return; const label=prompt("Descrição:")||code; const s=DB.services.find(x=>x.id===b.dataset.s); s.turnos.push({code:code.trim(),label:label.trim()}); await persist(); renderSvcList();});
 }
-
 function renderEmpMgr() {
   const el=document.getElementById("empMgr");
   if(!DB.employees.length){el.innerHTML=`<p class="hint">Ainda sem operacionais.</p>`;return;}
   el.innerHTML=`<div class="flex">${DB.employees.map(e=>`<span class="turno-tag">${e.name}<button class="delE" data-e="${e.id}">×</button></span>`).join("")}</div>`;
   el.querySelectorAll(".delE").forEach(b=>b.onclick=async()=>{DB.employees=DB.employees.filter(e=>e.id!==b.dataset.e); await persist(); renderEmpMgr();});
 }
-
 function renderSubList() {
   const el=document.getElementById("subList");
   const subs=DB.submissions.filter(s=>s.month===DB.period.month&&s.year===DB.period.year);
@@ -523,25 +491,17 @@ function renderSubList() {
   el.querySelectorAll(".delSub").forEach(b=>b.onclick=async()=>{DB.submissions=DB.submissions.filter(s=>s.id!==b.dataset.id); await persist(); renderSubList();});
 }
 
-/* ---------- EXPORT ---------- */
 function exportXlsx(){
   const {month,year}=DB.period;
   const dim=daysIn(month,year);
   const dayCols=[];
-  for(let d=1;d<=dim;d++){
-    const dow=new Date(year,month,d).getDay();
-    dayCols.push(`${d}${(dow===0||dow===6)?" - "+(dow===0?"D":"S"):""}`);
-  }
+  for(let d=1;d<=dim;d++){const dow=new Date(year,month,d).getDay(); dayCols.push(`${d}${(dow===0||dow===6)?" - "+(dow===0?"D":"S"):""}`);}
   const wb=XLSX.utils.book_new();
   const usedNames=[];
   DB.services.forEach(svc=>{
     const subs=DB.submissions.filter(s=>s.service===svc.id&&s.month===month&&s.year===year);
     const rows=[["Nº","Nome","Obs.",...dayCols]];
-    subs.forEach((s,i)=>{
-      const row=[i+1,s.name,""];
-      for(let d=1;d<=dim;d++){const a=s.sel[d]; row.push(a&&a.length?"✓":"");}
-      rows.push(row);
-    });
+    subs.forEach((s,i)=>{const row=[i+1,s.name,""]; for(let d=1;d<=dim;d++){const a=s.sel[d]; row.push(a&&a.length?"✓":"");} rows.push(row);});
     if(!subs.length) rows.push(["","(sem submissões)","",...Array(dim).fill("")]);
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws["!cols"]=[{wch:5},{wch:24},{wch:8},...Array(dim).fill({wch:5})];
@@ -569,7 +529,6 @@ function importJson(e){
   r.readAsText(f); e.target.value="";
 }
 
-/* ---------- PWA ---------- */
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;document.getElementById("installBar").style.display="flex";});
 document.getElementById("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById("installBar").style.display="none";};
@@ -577,19 +536,13 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("sw-cpo.js?v=1").catch(()=>{}));
 }
 
-/* ---------- BOOT ---------- */
 (async function(){
   if (SHARED) {
-    // Aguarda o Firebase resolver a sessão guardada
     auth.onAuthStateChanged(async user => {
-      if (user && user.emailVerified) {
-        await enterApp(user);
-      } else {
-        showLogin();
-      }
+      if (user && user.emailVerified) { await enterApp(user); }
+      else { showLogin(); }
     });
   } else {
-    // Modo local sem login
     elHeader.style.display = "flex";
     elBody.style.display   = "block";
     elLogin.style.display  = "none";
