@@ -11,30 +11,32 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Escala CPO">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Firebase SDKs (compat mode — sem build step necessário) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
-    --bg:#FFF8F2; --card:#ffffff; --ink:#1f2430; --muted:#6b7280; --line:#F0CCA8;
-    --accent:#C25A0C; --accent-soft:#FDEBD8; --accent-ink:#7D3408;
-    --ok:#0F6E56; --ok-soft:#E1F5EE; --danger:#A32D2D; --danger-soft:#FCEBEB;
-    --weekend-bg:#FFF3E0; --weekend-border:#FFCC80; --weekend-num:#B07000;
+    --bg:#FFF8F2;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#F0CCA8;
+    --accent:#C25A0C;--accent-soft:#FDEBD8;--accent-ink:#7D3408;
+    --ok:#0F6E56;--ok-soft:#E1F5EE;--danger:#A32D2D;--danger-soft:#FCEBEB;
+    --weekend-bg:#FFF3E0;--weekend-border:#FFCC80;--weekend-num:#B07000;
     --radius:12px;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-    background:var(--bg);color:var(--ink);line-height:1.5;
-    padding-bottom:env(safe-area-inset-bottom);}
+    background:var(--bg);color:var(--ink);line-height:1.5;padding-bottom:env(safe-area-inset-bottom);}
   header{background:var(--accent);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 20px 14px;
     display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
     position:sticky;top:0;z-index:10;}
-  header h1{font-size:17px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px;}
+  header h1{font-size:17px;font-weight:600;margin:0;}
   .wrap{max-width:1000px;margin:0 auto;padding:16px;}
   .seg{display:inline-flex;background:rgba(255,255,255,.15);border-radius:8px;overflow:hidden;}
   .seg button{border:none;background:transparent;color:#fff;padding:8px 14px;font-size:14px;cursor:pointer;}
   .seg button.on{background:#fff;color:var(--accent);font-weight:600;}
+  /* sub-tabs admin */
+  .subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .subtabs button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--ink);}
+  .subtabs button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
   label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px;}
   input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:#fff;}
@@ -42,19 +44,21 @@
   button.btn:hover{background:#f0f2f5;}
   button.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
   button.btn.ghost{background:transparent;}
+  button.btn.sm{padding:5px 10px;font-size:12px;}
   button.btn.danger{color:var(--danger);border-color:var(--danger-soft);}
   .row{display:grid;gap:12px;}
   .grid2{grid-template-columns:1fr 1fr;}
+  .grid3{grid-template-columns:1fr 1fr 1fr;}
   .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:8px;background:var(--accent-soft);color:var(--accent-ink);}
   .pill.live{background:var(--ok-soft);color:var(--ok);}
   .pill.local{background:#fdecdc;color:#854F0B;}
   .dow{text-align:center;font-size:11px;color:var(--muted);padding:2px 0;}
+  .dow.we{color:var(--weekend-num);font-weight:600;}
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:6px;}
   .day{border:1px solid var(--line);border-radius:8px;padding:5px;min-height:60px;background:#fff;}
   .day.empty{border:none;background:transparent;}
   .day.weekend{background:var(--weekend-bg);border-color:var(--weekend-border);}
   .day.weekend .dn{color:var(--weekend-num);font-weight:600;}
-  .dow.we{color:var(--weekend-num);font-weight:600;}
   .dn{font-size:11px;color:var(--muted);margin-bottom:3px;}
   .t{font-size:11px;padding:3px 7px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer;margin:1px 1px 0 0;display:inline-block;}
   .t.sel{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent);font-weight:600;}
@@ -73,15 +77,32 @@
   .turno-tag button{border:none;background:none;cursor:pointer;color:var(--danger);font-size:15px;line-height:1;}
   .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .sp{justify-content:space-between;}
+  /* Escala builder */
+  .escala-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px;}
+  .escala-day{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;min-height:90px;}
+  .escala-day.we{background:var(--weekend-bg);border-color:var(--weekend-border);}
+  .escala-day-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .escala-day-num{font-weight:700;font-size:14px;color:var(--accent-ink);}
+  .escala-day-dow{font-size:11px;color:var(--muted);}
+  .escala-person{display:flex;justify-content:space-between;align-items:center;background:var(--accent-soft);
+    border-radius:6px;padding:3px 6px;margin-bottom:3px;font-size:12px;gap:4px;}
+  .escala-person span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .escala-person button{border:none;background:none;cursor:pointer;color:var(--danger);font-size:14px;padding:0;line-height:1;flex-shrink:0;}
+  .escala-add{margin-top:4px;}
+  .escala-add select{padding:4px 6px;font-size:12px;border-radius:6px;border:1px dashed var(--line);}
   #installBar{display:none;background:var(--accent-soft);color:var(--accent-ink);padding:10px 16px;
     text-align:center;font-size:14px;align-items:center;justify-content:center;gap:10px;}
   #installBar button{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;}
-  @media(max-width:640px){.grid2{grid-template-columns:1fr;}.cal{gap:3px;}.day{min-height:54px;padding:4px;}}
+  @media(max-width:640px){
+    .grid2,.grid3{grid-template-columns:1fr;}
+    .cal{gap:3px;}.day{min-height:54px;padding:4px;}
+    .escala-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
+  }
 </style>
 </head>
 <body>
 <header id="appHeader" style="display:none;">
-  <h1><img src="icon-192.png" alt="" style="width:26px;height:26px;border-radius:5px;background:#fff;vertical-align:middle;"> Escala CPO</h1>
+  <h1>Escala CPO</h1>
   <div class="flex" style="gap:10px;">
     <div class="seg" id="seg">
       <button class="on" data-v="emp">Operacionais</button>
@@ -95,7 +116,6 @@
 <div id="loginScreen" style="display:none;min-height:100vh;align-items:flex-start;justify-content:center;padding:40px 16px;">
   <div class="card" style="max-width:380px;width:100%;margin-top:6vh;">
     <div style="text-align:center;margin-bottom:18px;">
-      <img src="icon-192.png" alt="CPO" style="width:76px;height:76px;border-radius:10px;">
       <h2 style="margin:8px 0 0;font-size:19px;color:var(--accent);">Escala CPO</h2>
       <p style="margin:4px 0 0;font-size:13px;color:var(--muted);">Comando Sub Regional do Douro</p>
       <p class="hint" style="margin-top:4px;">Acesso reservado aos operacionais autorizados</p>
@@ -119,13 +139,11 @@
 <div class="toast" id="toast"></div>
 
 <footer style="text-align:center;padding:18px 16px calc(18px + env(safe-area-inset-bottom));font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:8px;">
-  © JPF-EstadoMaior-2026 — Todos os direitos reservados
+  © JPF — Núcleo de Apoio às Operações-CSREPC Douro — 2026
 </footer>
 
 <script>
-/* =============================================================
-   CONFIGURAÇÃO FIREBASE — valores copiados do Firebase Console
-   ============================================================= */
+/* ============================================================= */
 const firebaseConfig = {
   apiKey: "AIzaSyAYGeVwWYxv4y_gcWlatIFO_P_v7yiVLTQ",
   authDomain: "escala-cpo.firebaseapp.com",
@@ -134,7 +152,6 @@ const firebaseConfig = {
   messagingSenderId: "357159211436",
   appId: "1:357159211436:web:d4e92173958d1c405f6a09"
 };
-
 const ADMIN_EMAILS = [
   "freitas89@outlook.pt",
   "miguel.fonseca@prociv.pt",
@@ -142,190 +159,164 @@ const ADMIN_EMAILS = [
   "celina.martins@prociv.pt",
   "paulapfa41@hotmail.com"
 ];
+/* ============================================================= */
 
-/* =============================================================
-   Inicialização Firebase (compat SDK — não usar import/require)
-   ============================================================= */
 const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DOW_FULL=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-const LS="cpo_escala_v1";
+const LS="cpo_escala_v2";
 
-let SHARED = false;
-let auth = null, db = null;
-
+let SHARED=false, auth=null, db=null;
 try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  if(firebaseConfig.apiKey&&firebaseConfig.projectId){
     firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db   = firebase.firestore();
-    SHARED = true;
+    auth=firebase.auth(); db=firebase.firestore(); SHARED=true;
   }
-} catch(e) { SHARED = false; }
+} catch(e){SHARED=false;}
 
-function getSecondaryAuth() {
-  try {
-    return firebase.app("secondary").auth();
-  } catch(_) {
-    firebase.initializeApp(firebaseConfig, "secondary");
-    return firebase.app("secondary").auth();
-  }
+function getSecondaryAuth(){
+  try{return firebase.app("secondary").auth();}
+  catch(_){firebase.initializeApp(firebaseConfig,"secondary");return firebase.app("secondary").auth();}
 }
 
-const today = new Date();
-const DEFAULT = {
-  period: { month: today.getMonth(), year: today.getFullYear() },
-  services: [
-    { id:"cpo", name:"CPO", turnos:[{ code:"CPO", label:"Turno CPO (22h–22h)" }] }
-  ],
-  employees: [],
-  submissions: []
+const today=new Date();
+const DEFAULT={
+  period:{month:today.getMonth(),year:today.getFullYear()},
+  services:[{id:"cpo",name:"CPO",turnos:[{code:"CPO",label:"Turno CPO (22h–22h)"}]}],
+  employees:[],
+  submissions:[],
+  schedule:{}   // {dayNum: [{name, num, corpo}]}
 };
 
-let DB = loadLocal();
-function loadLocal(){
-  try { const r=localStorage.getItem(LS); return r ? JSON.parse(r) : structuredClone(DEFAULT); }
-  catch(e){ return structuredClone(DEFAULT); }
+let DB=loadLocal();
+function loadLocal(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):structuredClone(DEFAULT);}catch(e){return structuredClone(DEFAULT);}}
+function saveLocal(){localStorage.setItem(LS,JSON.stringify(DB));}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2400);}
+function daysIn(m,y){return new Date(y,m+1,0).getDate();}
+function firstDow(m,y){return new Date(y,m,1).getDay();}
+function uid(){return Math.random().toString(36).slice(2,9);}
+
+const DOC_ID="cpo-main";
+async function pullShared(){
+  if(!SHARED)return;
+  try{const snap=await db.collection("app_state").doc(DOC_ID).get();
+    if(snap.exists){DB=snap.data();if(!DB.schedule)DB.schedule={};}
+    else{await pushShared();}
+  }catch(e){toast("Sem ligação ao servidor — modo local.");SHARED=false;}
 }
-function saveLocal(){ localStorage.setItem(LS, JSON.stringify(DB)); }
-
-function toast(m){ const t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2400); }
-function daysIn(m,y){ return new Date(y,m+1,0).getDate(); }
-function firstDow(m,y){ return new Date(y,m,1).getDay(); }
-function uid(){ return Math.random().toString(36).slice(2,9); }
-
-const DOC_ID = "cpo-main";
-
-async function pullShared() {
-  if (!SHARED) return;
-  try {
-    const snap = await db.collection("app_state").doc(DOC_ID).get();
-    if (snap.exists) { DB = snap.data(); }
-    else { await pushShared(); }
-  } catch(e) { toast("Sem ligação ao servidor — modo local."); SHARED = false; }
+async function pushShared(){
+  if(!SHARED){saveLocal();return;}
+  try{await db.collection("app_state").doc(DOC_ID).set(DB);}
+  catch(e){toast("Falha ao guardar no servidor.");}
 }
-async function pushShared() {
-  if (!SHARED) { saveLocal(); return; }
-  try { await db.collection("app_state").doc(DOC_ID).set(DB); }
-  catch(e) { toast("Falha ao guardar no servidor."); }
-}
-async function persist() { if (SHARED) { await pushShared(); } else { saveLocal(); } }
+async function persist(){if(SHARED){await pushShared();}else{saveLocal();}}
 
-let emp = { service:"cpo", name:"", sel:{} };
-const empView   = document.getElementById("empView");
-const adminView = document.getElementById("adminView");
+let emp={service:"cpo",name:"",num:"",corpo:"",sel:{}};
+let adminSubTab="submissoes";
+const empView=document.getElementById("empView");
+const adminView=document.getElementById("adminView");
 
-document.querySelectorAll("#seg button").forEach(b => b.onclick = async () => {
-  document.querySelectorAll("#seg button").forEach(x => x.classList.remove("on"));
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=async()=>{
+  document.querySelectorAll("#seg button").forEach(x=>x.classList.remove("on"));
   b.classList.add("on");
-  const v = b.dataset.v;
-  empView.style.display   = v==="emp"   ? "block" : "none";
-  adminView.style.display = v==="admin" ? "block" : "none";
-  if (SHARED) await pullShared();
-  if (v==="admin") renderAdmin(); else renderEmp();
+  const v=b.dataset.v;
+  empView.style.display=v==="emp"?"block":"none";
+  adminView.style.display=v==="admin"?"block":"none";
+  if(SHARED)await pullShared();
+  if(v==="admin")renderAdmin();else renderEmp();
 });
 
-function statusPill() {
+function statusPill(){
   return SHARED
-    ? `<span class="pill live">● Partilhado (todos veem)</span>`
-    : `<span class="pill local">● Local (só este dispositivo)</span>`;
+    ?`<span class="pill live">● Partilhado</span>`
+    :`<span class="pill local">● Local</span>`;
 }
 
-let SESSION = null, IS_ADMIN = false;
-const elLogin    = document.getElementById("loginScreen");
-const elHeader   = document.getElementById("appHeader");
-const elBody     = document.getElementById("appBody");
-const elAdminTab = document.getElementById("adminTab");
+/* ---- AUTH ---- */
+let SESSION=null,IS_ADMIN=false;
+const elLogin=document.getElementById("loginScreen");
+const elHeader=document.getElementById("appHeader");
+const elBody=document.getElementById("appBody");
+const elAdminTab=document.getElementById("adminTab");
 
-function showLoginError(m){ const e=document.getElementById("loginError"); e.textContent=m; e.style.display="block"; document.getElementById("loginInfo").style.display="none"; }
-function showLoginInfo(m) { const e=document.getElementById("loginInfo");  e.textContent=m; e.style.display="block"; document.getElementById("loginError").style.display="none"; }
+function showLoginError(m){const e=document.getElementById("loginError");e.textContent=m;e.style.display="block";document.getElementById("loginInfo").style.display="none";}
+function showLoginInfo(m){const e=document.getElementById("loginInfo");e.textContent=m;e.style.display="block";document.getElementById("loginError").style.display="none";}
 
-async function enterApp(user) {
-  SESSION = user;
-  elLogin.style.display  = "none";
-  elHeader.style.display = "flex";
-  elBody.style.display   = "block";
-  IS_ADMIN = ADMIN_EMAILS.map(x=>x.toLowerCase()).includes((user?.email||"").toLowerCase());
-  elAdminTab.style.display = IS_ADMIN ? "inline-block" : "none";
-  if (!emp.name && user?.displayName) emp.name = user.displayName;
-  else if (!emp.name && user?.email)  emp.name = user.email.split("@")[0];
-  if (SHARED) await pullShared();
+async function enterApp(user){
+  SESSION=user;
+  elLogin.style.display="none";elHeader.style.display="flex";elBody.style.display="block";
+  IS_ADMIN=ADMIN_EMAILS.map(x=>x.toLowerCase()).includes((user?.email||"").toLowerCase());
+  elAdminTab.style.display=IS_ADMIN?"inline-block":"none";
+  if(!emp.name&&user?.displayName)emp.name=user.displayName;
+  else if(!emp.name&&user?.email)emp.name=user.email.split("@")[0];
+  if(SHARED)await pullShared();
   renderEmp();
 }
-function showLogin() {
-  elHeader.style.display = "none";
-  elBody.style.display   = "none";
-  elLogin.style.display  = "flex";
-}
+function showLogin(){elHeader.style.display="none";elBody.style.display="none";elLogin.style.display="flex";}
 
-async function doLogin() {
-  const email = document.getElementById("liEmail").value.trim();
-  const pass  = document.getElementById("liPass").value;
-  if (!email||!pass) { showLoginError("Preenche email e palavra-passe."); return; }
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch(e) { showLoginError("Email ou palavra-passe incorretos."); }
+async function doLogin(){
+  const email=document.getElementById("liEmail").value.trim();
+  const pass=document.getElementById("liPass").value;
+  if(!email||!pass){showLoginError("Preenche email e palavra-passe.");return;}
+  try{await auth.signInWithEmailAndPassword(email,pass);}
+  catch(e){showLoginError("Email ou palavra-passe incorretos.");}
 }
-async function doLogout() {
+async function doLogout(){
   await auth.signOut();
-  SESSION = null; IS_ADMIN = false; emp = {service:"cpo", name:"", sel:{}};
-  document.getElementById("liEmail").value = "";
-  document.getElementById("liPass").value  = "";
+  SESSION=null;IS_ADMIN=false;emp={service:"cpo",name:"",num:"",corpo:"",sel:{}};
+  document.getElementById("liEmail").value="";document.getElementById("liPass").value="";
   showLogin();
 }
-async function doForgot() {
-  const email = document.getElementById("liEmail").value.trim();
-  if (!email) { showLoginError("Escreve o teu email primeiro."); return; }
-  try {
-    await auth.sendPasswordResetEmail(email);
-    showLoginInfo("Enviámos um email para recuperares a palavra-passe.");
-  } catch(e) { showLoginError("Não foi possível enviar. Verifica o email."); }
+async function doForgot(){
+  const email=document.getElementById("liEmail").value.trim();
+  if(!email){showLoginError("Escreve o teu email primeiro.");return;}
+  try{await auth.sendPasswordResetEmail(email);showLoginInfo("Enviámos um email para recuperares a palavra-passe.");}
+  catch(e){showLoginError("Não foi possível enviar. Verifica o email.");}
 }
+document.getElementById("liBtn").onclick=doLogin;
+document.getElementById("liPass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+document.getElementById("logoutBtn").onclick=doLogout;
+document.getElementById("forgotLink").onclick=e=>{e.preventDefault();doForgot();};
 
-document.getElementById("liBtn").onclick    = doLogin;
-document.getElementById("liPass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
-document.getElementById("logoutBtn").onclick = doLogout;
-document.getElementById("forgotLink").onclick = e => { e.preventDefault(); doForgot(); };
-
-async function createAccount() {
-  const hint  = document.getElementById("acHint");
-  const nome  = document.getElementById("acNome").value.trim();
-  const email = document.getElementById("acEmail").value.trim();
-  const pass  = document.getElementById("acPass").value;
-  if (!SHARED)       { hint.textContent="Configura primeiro o Firebase para criar contas."; return; }
-  if (!nome||!email||!pass) { hint.textContent="Preenche nome, email e palavra-passe."; return; }
-  if (pass.length<6) { hint.textContent="A palavra-passe tem de ter pelo menos 6 caracteres."; return; }
-  hint.textContent = "A criar conta...";
-  try {
-    const secAuth = getSecondaryAuth();
-    const cred = await secAuth.createUserWithEmailAndPassword(email, pass);
-    await cred.user.updateProfile({ displayName: nome });
+async function createAccount(){
+  const hint=document.getElementById("acHint");
+  const nome=document.getElementById("acNome").value.trim();
+  const email=document.getElementById("acEmail").value.trim();
+  const pass=document.getElementById("acPass").value;
+  if(!SHARED){hint.textContent="Configura primeiro o Firebase para criar contas.";return;}
+  if(!nome||!email||!pass){hint.textContent="Preenche nome, email e palavra-passe.";return;}
+  if(pass.length<6){hint.textContent="A palavra-passe tem de ter pelo menos 6 caracteres.";return;}
+  hint.textContent="A criar conta...";
+  try{
+    const secAuth=getSecondaryAuth();
+    const cred=await secAuth.createUserWithEmailAndPassword(email,pass);
+    await cred.user.updateProfile({displayName:nome});
     await secAuth.signOut();
-    if (!DB.employees.find(e=>e.name.toLowerCase()===nome.toLowerCase())) {
-      DB.employees.push({id:uid(), name:nome, email});
-      await persist();
+    if(!DB.employees.find(e=>e.name.toLowerCase()===nome.toLowerCase())){
+      DB.employees.push({id:uid(),name:nome,email});await persist();
     }
-    document.getElementById("acNome").value = "";
-    document.getElementById("acEmail").value = "";
-    document.getElementById("acPass").value = "";
-    hint.textContent = `Conta criada para ${nome}. Entrega-lhe o email (${email}) e a palavra-passe inicial para entrar.`;
+    document.getElementById("acNome").value="";
+    document.getElementById("acEmail").value="";
+    document.getElementById("acPass").value="";
+    hint.textContent=`Conta criada para ${nome}. Entrega-lhe o email (${email}) e a palavra-passe inicial.`;
     renderEmpMgr();
-  } catch(e) {
-    if (/email-already-in-use/.test(e.code)) hint.textContent = "Já existe uma conta com esse email.";
-    else hint.textContent = "Erro: " + (e.message||"não foi possível criar.");
+  }catch(e){
+    if(/email-already-in-use/.test(e.code))hint.textContent="Já existe uma conta com esse email.";
+    else hint.textContent="Erro: "+(e.message||"não foi possível criar.");
   }
 }
 
-function renderEmp() {
-  if (!DB.services.length) {
-    empView.innerHTML=`<div class="card"><p>Ainda não há serviços configurados. Pede ao administrador.</p></div>`;
-    return;
-  }
-  const svc = DB.services.find(s=>s.id===emp.service)||DB.services[0];
-  emp.service = svc.id;
-  const {month,year} = DB.period;
-  const dim=daysIn(month,year), lead=firstDow(month,year);
+/* ============================================================
+   VISTA OPERACIONAIS
+   ============================================================ */
+function renderEmp(){
+  if(!DB.services.length){empView.innerHTML=`<div class="card"><p>Ainda não há serviços configurados.</p></div>`;return;}
+  const svc=DB.services.find(s=>s.id===emp.service)||DB.services[0];
+  emp.service=svc.id;
+  const {month,year}=DB.period;
+  const dim=daysIn(month,year),lead=firstDow(month,year);
   let cells="";
-  for(let i=0;i<lead;i++) cells+=`<div class="day empty"></div>`;
+  for(let i=0;i<lead;i++)cells+=`<div class="day empty"></div>`;
   for(let d=1;d<=dim;d++){
     const dow=new Date(year,month,d).getDay();
     const we=(dow===0||dow===6)?"weekend":"";
@@ -337,15 +328,24 @@ function renderEmp() {
   empView.innerHTML=`
     <div class="card">
       <div class="flex sp" style="margin-bottom:14px;">
-        <span class="pill">${MESES[month]} ${year}</span>
-        ${statusPill()}
+        <span class="pill">${MESES[month]} ${year}</span>${statusPill()}
+      </div>
+      <div class="row grid2" style="margin-bottom:12px;">
+        <div>
+          <label>Nome completo</label>
+          <input id="eName" list="empList" placeholder="O teu nome" value="${emp.name}">
+          <datalist id="empList">${DB.employees.map(e=>`<option value="${e.name}">`).join("")}</datalist>
+        </div>
+        <div>
+          <label>Nº Mecanográfico</label>
+          <input id="eNum" type="text" placeholder="Ex: 12345" value="${emp.num}">
+        </div>
       </div>
       <div style="margin-bottom:14px;">
-        <label>O teu nome</label>
-        <input id="eName" list="empList" placeholder="Escreve ou escolhe o teu nome" value="${emp.name}">
-        <datalist id="empList">${DB.employees.map(e=>`<option value="${e.name}">`).join("")}</datalist>
+        <label>Corpo de Bombeiros</label>
+        <input id="eCorpo" type="text" placeholder="Ex: Bombeiros Voluntários de Vila Real" value="${emp.corpo}">
       </div>
-      <p class="hint" style="margin-bottom:8px;">Clica nos dias em que estás disponível para o <b>Turno CPO (22h–22h)</b>. Dias marcados ficam com fundo laranja.</p>
+      <p class="hint" style="margin-bottom:8px;">Clica nos dias em que estás disponível para o <b>Turno CPO (22h–22h)</b>.</p>
       <div class="cal">${DOW.map((d,i)=>`<div class="dow${(i===0||i===6)?' we':''}">${d}</div>`).join("")}</div>
       <div class="cal">${cells}</div>
       <p class="hint" style="margin-top:10px;">${count} dia${count!==1?'s':''} selecionado${count!==1?'s':''}.</p>
@@ -354,56 +354,220 @@ function renderEmp() {
         <button class="btn primary" id="eSubmit">Submeter disponibilidade</button>
       </div>
     </div>`;
-  document.getElementById("eName").oninput = e => emp.name=e.target.value;
-  document.getElementById("eClear").onclick = () => { emp.sel={}; renderEmp(); };
+  document.getElementById("eName").oninput=e=>emp.name=e.target.value;
+  document.getElementById("eNum").oninput=e=>emp.num=e.target.value;
+  document.getElementById("eCorpo").oninput=e=>emp.corpo=e.target.value;
+  document.getElementById("eClear").onclick=()=>{emp.sel={};renderEmp();};
   empView.querySelectorAll(".t").forEach(b=>b.onclick=()=>{
-    const d=b.dataset.d, c=b.dataset.c;
+    const d=b.dataset.d,c=b.dataset.c;
     emp.sel[d]=emp.sel[d]||[];
     const i=emp.sel[d].indexOf(c);
-    if(i>=0) emp.sel[d].splice(i,1); else emp.sel[d].push(c);
-    if(!emp.sel[d].length) delete emp.sel[d];
+    if(i>=0)emp.sel[d].splice(i,1);else emp.sel[d].push(c);
+    if(!emp.sel[d].length)delete emp.sel[d];
     renderEmp();
   });
-  document.getElementById("eSubmit").onclick = submitEmp;
+  document.getElementById("eSubmit").onclick=submitEmp;
 }
 
-async function submitEmp() {
-  if (!emp.name.trim()) { toast("Escreve o teu nome primeiro."); return; }
-  if (!Object.keys(emp.sel).length) { toast("Marca pelo menos um dia."); return; }
-  if (SHARED) await pullShared();
-  const name = emp.name.trim();
-  if (!DB.employees.find(e=>e.name.toLowerCase()===name.toLowerCase()))
-    DB.employees.push({id:uid(), name});
-  DB.submissions = DB.submissions.filter(s=>!(
-    s.name.toLowerCase()===name.toLowerCase() &&
-    s.service===emp.service && s.month===DB.period.month && s.year===DB.period.year
+async function submitEmp(){
+  if(!emp.name.trim()){toast("Escreve o teu nome primeiro.");return;}
+  if(!emp.num.trim()){toast("Indica o teu Nº Mecanográfico.");return;}
+  if(!emp.corpo.trim()){toast("Indica o teu Corpo de Bombeiros.");return;}
+  if(!Object.keys(emp.sel).length){toast("Marca pelo menos um dia.");return;}
+  if(SHARED)await pullShared();
+  const name=emp.name.trim(),num=emp.num.trim(),corpo=emp.corpo.trim();
+  if(!DB.employees.find(e=>e.name.toLowerCase()===name.toLowerCase()))
+    DB.employees.push({id:uid(),name,num,corpo});
+  DB.submissions=DB.submissions.filter(s=>!(
+    s.name.toLowerCase()===name.toLowerCase()&&
+    s.service===emp.service&&s.month===DB.period.month&&s.year===DB.period.year
   ));
-  DB.submissions.push({id:uid(), name, service:emp.service, month:DB.period.month, year:DB.period.year, sel:structuredClone(emp.sel), at:Date.now()});
+  DB.submissions.push({id:uid(),name,num,corpo,service:emp.service,month:DB.period.month,year:DB.period.year,sel:structuredClone(emp.sel),at:Date.now()});
   await persist();
-  emp.sel={}; renderEmp(); toast("Disponibilidade submetida. Obrigado!");
+  emp.sel={};renderEmp();toast("Disponibilidade submetida. Obrigado!");
 }
 
-function renderAdmin() {
+/* ============================================================
+   VISTA ADMINISTRADOR
+   ============================================================ */
+function renderAdmin(){
   const {month,year}=DB.period;
   adminView.innerHTML=`
-    <div class="card">
-      <div class="flex sp" style="margin-bottom:6px;"><h3 style="margin:0;font-size:15px;">Período da escala</h3>${statusPill()}</div>
-      <div class="row grid2">
-        <div><label>Mês</label><select id="aMonth">${MESES.map((m,i)=>`<option value="${i}" ${i===month?'selected':''}>${m}</option>`).join("")}</select></div>
-        <div><label>Ano</label><input id="aYear" type="number" value="${year}"></div>
+    <div class="card" style="padding:12px 18px;">
+      <div class="flex sp">
+        <div class="flex" style="gap:6px;">
+          <select id="aMonth" style="width:auto;padding:8px;">${MESES.map((m,i)=>`<option value="${i}" ${i===month?'selected':''}>${m}</option>`).join("")}</select>
+          <input id="aYear" type="number" value="${year}" style="width:90px;padding:8px;">
+        </div>
+        <div class="flex" style="gap:6px;">${statusPill()}
+          <button class="btn ghost sm" id="refresh">↻ Atualizar</button>
+        </div>
       </div>
     </div>
-    <div class="card">
-      <div class="flex sp"><h3 style="margin:0;font-size:15px;">Serviços e turnos</h3>
-        <button class="btn" id="addSvc">+ Novo serviço</button></div>
-      <p class="hint">O serviço CPO está pré-configurado. Podes adicionar outros se necessário.</p>
-      <div id="svcList" style="margin-top:12px;"></div>
+    <div class="subtabs">
+      <button class="${adminSubTab==='submissoes'?'on':''}" data-st="submissoes">Submissões</button>
+      <button class="${adminSubTab==='escala'?'on':''}" data-st="escala">Escala</button>
+      <button class="${adminSubTab==='gestao'?'on':''}" data-st="gestao">Gestão</button>
+      <button class="${adminSubTab==='config'?'on':''}" data-st="config">Configurações</button>
     </div>
+    <div id="adminSub"></div>`;
+
+  document.getElementById("aMonth").onchange=async e=>{DB.period.month=+e.target.value;await persist();renderAdmin();};
+  document.getElementById("aYear").onchange=async e=>{DB.period.year=+e.target.value;await persist();renderAdmin();};
+  document.getElementById("refresh").onclick=async()=>{if(SHARED)await pullShared();renderAdmin();toast("Atualizado.");};
+  document.querySelectorAll(".subtabs button").forEach(b=>b.onclick=()=>{adminSubTab=b.dataset.st;renderAdmin();});
+
+  if(adminSubTab==="submissoes")renderSubTab();
+  else if(adminSubTab==="escala")renderEscalaTab();
+  else if(adminSubTab==="gestao")renderGestaoTab();
+  else if(adminSubTab==="config")renderConfigTab();
+}
+
+/* ---------- Sub: Submissões ---------- */
+function renderSubTab(){
+  const sub=document.getElementById("adminSub");
+  const {month,year}=DB.period;
+  const subs=DB.submissions.filter(s=>s.month===month&&s.year===year);
+  sub.innerHTML=`
+    <div class="card">
+      <div class="flex sp" style="margin-bottom:12px;">
+        <h3 style="margin:0;font-size:15px;">Submissões — ${MESES[month]} ${year} (${subs.length})</h3>
+        <button class="btn sm" id="expXlsx">Exportar .xlsx</button>
+      </div>
+      ${subs.length?`<div style="overflow-x:auto;"><table>
+        <thead><tr><th>Nome</th><th>Nº Mec.</th><th>Corpo</th><th>Dias disponíveis</th><th></th></tr></thead>
+        <tbody>${subs.map(s=>{
+          const days=Object.entries(s.sel).sort((a,b)=>+a[0]-+b[0]).map(([d])=>`<span class="tag">${d}</span>`).join("");
+          return `<tr>
+            <td>${s.name}</td>
+            <td>${s.num||'—'}</td>
+            <td>${s.corpo||'—'}</td>
+            <td>${days}</td>
+            <td><button class="btn ghost delSub" data-id="${s.id}" style="padding:4px 8px;font-size:12px;color:var(--danger);">apagar</button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`:`<p class="hint">Sem submissões para ${MESES[month]} ${year}.</p>`}
+    </div>`;
+  document.getElementById("expXlsx").onclick=exportXlsx;
+  sub.querySelectorAll(".delSub").forEach(b=>b.onclick=async()=>{
+    DB.submissions=DB.submissions.filter(s=>s.id!==b.dataset.id);await persist();renderSubTab();
+  });
+}
+
+/* ---------- Sub: Escala ---------- */
+function renderEscalaTab(){
+  const sub=document.getElementById("adminSub");
+  const {month,year}=DB.period;
+  if(!DB.schedule)DB.schedule={};
+  const dim=daysIn(month,year);
+  // Recolher todos os nomes disponíveis das submissões do mês
+  const subs=DB.submissions.filter(s=>s.month===month&&s.year===year);
+
+  let grid="";
+  for(let d=1;d<=dim;d++){
+    const dow=new Date(year,month,d).getDay();
+    const we=(dow===0||dow===6)?"we":"";
+    const key=String(d);
+    const agendados=DB.schedule[key]||[];
+    // pessoas disponíveis neste dia (das submissões) que ainda não estão agendadas
+    const dispNesteDia=subs.filter(s=>{
+      const sel=s.sel||{};
+      return Object.keys(sel).includes(key);
+    });
+    const todosOsNomes=[...new Set([
+      ...DB.employees.map(e=>e.name),
+      ...subs.map(s=>s.name)
+    ])].filter(n=>!agendados.find(a=>a.name===n));
+
+    const pessoasHTML=agendados.map((p,i)=>{
+      const info=p.num?` (${p.num})`:'';
+      return `<div class="escala-person">
+        <span title="${p.corpo||''}">${p.name}${info}</span>
+        <button class="mv-btn" data-d="${d}" data-i="${i}" title="Mover para outro dia">⇄</button>
+        <button class="rm-btn" data-d="${d}" data-i="${i}">×</button>
+      </div>`;
+    }).join("");
+
+    const addOpts=todosOsNomes.map(n=>{
+      const sub=subs.find(s=>s.name===n);
+      const disp=dispNesteDia.find(s=>s.name===n);
+      return `<option value="${n}" data-num="${sub?.num||''}" data-corpo="${sub?.corpo||''}">${n}${disp?' ✓':''}${sub?.num?' ('+sub.num+')':''}</option>`;
+    }).join("");
+
+    grid+=`<div class="escala-day ${we}">
+      <div class="escala-day-hd">
+        <span class="escala-day-num">${d}</span>
+        <span class="escala-day-dow">${DOW[dow]}</span>
+      </div>
+      ${pessoasHTML}
+      ${addOpts?`<div class="escala-add">
+        <select class="add-sel" data-d="${d}" style="width:100%;padding:4px;font-size:12px;border-radius:6px;border:1px dashed var(--line);">
+          <option value="">+ adicionar</option>${addOpts}
+        </select>
+      </div>`:'<p style="font-size:11px;color:var(--muted);margin:4px 0 0;">Todos adicionados</p>'}
+    </div>`;
+  }
+
+  sub.innerHTML=`
+    <div class="card">
+      <div class="flex sp" style="margin-bottom:4px;">
+        <h3 style="margin:0;font-size:15px;">Escala — ${MESES[month]} ${year}</h3>
+        <button class="btn sm primary" id="expEscala">Exportar .xlsx</button>
+      </div>
+      <p class="hint" style="margin-bottom:12px;">✓ = pessoa com disponibilidade declarada neste dia. Podes adicionar qualquer elemento independentemente.</p>
+      <div class="escala-grid">${grid}</div>
+    </div>`;
+
+  // Remover
+  sub.querySelectorAll(".rm-btn").forEach(b=>b.onclick=async()=>{
+    const d=b.dataset.d,i=+b.dataset.i;
+    if(!DB.schedule[d])return;
+    DB.schedule[d].splice(i,1);
+    if(!DB.schedule[d].length)delete DB.schedule[d];
+    await persist();renderEscalaTab();
+  });
+
+  // Mover
+  sub.querySelectorAll(".mv-btn").forEach(b=>b.onclick=async()=>{
+    const d=b.dataset.d,i=+b.dataset.i;
+    const pessoa=DB.schedule[d]?.[i];
+    if(!pessoa)return;
+    const dest=prompt(`Mover "${pessoa.name}" para o dia:`);
+    if(!dest||isNaN(+dest)||+dest<1||+dest>dim){toast("Dia inválido.");return;}
+    const destKey=String(+dest);
+    DB.schedule[d].splice(i,1);
+    if(!DB.schedule[d].length)delete DB.schedule[d];
+    if(!DB.schedule[destKey])DB.schedule[destKey]=[];
+    if(!DB.schedule[destKey].find(p=>p.name===pessoa.name))
+      DB.schedule[destKey].push(pessoa);
+    await persist();renderEscalaTab();
+  });
+
+  // Adicionar
+  sub.querySelectorAll(".add-sel").forEach(sel=>sel.onchange=async e=>{
+    const nome=e.target.value;if(!nome)return;
+    const d=sel.dataset.d;
+    const opt=e.target.selectedOptions[0];
+    const num=opt.dataset.num||'';
+    const corpo=opt.dataset.corpo||'';
+    if(!DB.schedule[d])DB.schedule[d]=[];
+    if(!DB.schedule[d].find(p=>p.name===nome))
+      DB.schedule[d].push({name:nome,num,corpo});
+    await persist();renderEscalaTab();
+  });
+
+  document.getElementById("expEscala").onclick=exportEscala;
+}
+
+/* ---------- Sub: Gestão ---------- */
+function renderGestaoTab(){
+  const sub=document.getElementById("adminSub");
+  sub.innerHTML=`
     <div class="card">
       <h3 style="margin:0 0 4px;font-size:15px;">Gestão de acessos</h3>
-      <p class="hint" style="margin-bottom:12px;">Cria a conta de cada operacional. Depois de criada, pode entrar de imediato com o email e palavra-passe que definires.</p>
+      <p class="hint" style="margin-bottom:12px;">Cria a conta de cada operacional. Pode entrar de imediato após a criação.</p>
       <div class="row grid2">
-        <div><label>Nome do operacional</label><input id="acNome" placeholder="Nome a mostrar"></div>
+        <div><label>Nome</label><input id="acNome" placeholder="Nome a mostrar"></div>
         <div><label>Email</label><input id="acEmail" type="email" placeholder="email@exemplo.pt"></div>
       </div>
       <div class="row grid2" style="margin-top:10px;align-items:end;">
@@ -414,133 +578,174 @@ function renderAdmin() {
     </div>
     <div class="card">
       <div class="flex sp"><h3 style="margin:0;font-size:15px;">Operacionais (${DB.employees.length})</h3>
-        <button class="btn" id="addEmp">+ Adicionar</button></div>
+        <button class="btn sm" id="addEmp">+ Adicionar</button></div>
       <div id="empMgr" style="margin-top:10px;"></div>
+    </div>`;
+  document.getElementById("acCreate").onclick=createAccount;
+  document.getElementById("addEmp").onclick=async()=>{
+    const n=prompt("Nome do operacional:");
+    if(n&&n.trim()){DB.employees.push({id:uid(),name:n.trim()});await persist();renderGestaoTab();}
+  };
+  renderEmpMgr();
+}
+
+function renderEmpMgr(){
+  const el=document.getElementById("empMgr");
+  if(!el)return;
+  if(!DB.employees.length){el.innerHTML=`<p class="hint">Ainda sem operacionais.</p>`;return;}
+  el.innerHTML=`<div style="overflow-x:auto;"><table>
+    <thead><tr><th>Nome</th><th>Nº Mec.</th><th>Corpo</th><th></th></tr></thead>
+    <tbody>${DB.employees.map(e=>`<tr>
+      <td>${e.name}</td><td>${e.num||'—'}</td><td>${e.corpo||'—'}</td>
+      <td><button class="btn ghost delE" data-e="${e.id}" style="padding:4px 8px;font-size:12px;color:var(--danger);">remover</button></td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+  el.querySelectorAll(".delE").forEach(b=>b.onclick=async()=>{
+    DB.employees=DB.employees.filter(e=>e.id!==b.dataset.e);await persist();renderEmpMgr();
+  });
+}
+
+/* ---------- Sub: Configurações ---------- */
+function renderConfigTab(){
+  const sub=document.getElementById("adminSub");
+  sub.innerHTML=`
+    <div class="card">
+      <div class="flex sp"><h3 style="margin:0;font-size:15px;">Serviços e turnos</h3>
+        <button class="btn sm" id="addSvc">+ Novo serviço</button></div>
+      <div id="svcList" style="margin-top:12px;"></div>
     </div>
     <div class="card">
-      <div class="flex sp"><h3 style="margin:0;font-size:15px;">Submissões (${DB.submissions.length})</h3>
-        <div class="flex">
-          <button class="btn" id="expXlsx">Exportar .xlsx</button>
-          <button class="btn ghost" id="refresh">Atualizar</button>
-        </div>
+      <div class="flex" style="gap:8px;">
+        <button class="btn ghost" id="expJson">Backup JSON</button>
+        <button class="btn ghost" id="impJson">Importar JSON</button>
+        <button class="btn danger" id="resetAll">Repor tudo</button>
       </div>
-      <div id="subList" style="margin-top:12px;"></div>
-    </div>
-    <div class="card">
-      <div class="flex"><button class="btn ghost" id="expJson">Backup</button>
-        <button class="btn ghost" id="impJson">Importar</button>
-        <button class="btn danger" id="resetAll">Repor tudo</button></div>
       <input type="file" id="impFile" accept=".json" style="display:none;">
     </div>`;
-
-  document.getElementById("aMonth").onchange = async e => { DB.period.month=+e.target.value; await persist(); renderAdmin(); };
-  document.getElementById("aYear").onchange  = async e => { DB.period.year=+e.target.value;  await persist(); renderAdmin(); };
-  document.getElementById("addSvc").onclick  = async () => { DB.services.push({id:uid(),name:"Novo serviço",turnos:[{code:"X",label:"Turno"}]}); await persist(); renderAdmin(); };
-  document.getElementById("addEmp").onclick  = async () => { const n=prompt("Nome do operacional:"); if(n&&n.trim()){DB.employees.push({id:uid(),name:n.trim()}); await persist(); renderAdmin();} };
-  document.getElementById("acCreate").onclick = createAccount;
-  document.getElementById("expXlsx").onclick  = exportXlsx;
-  document.getElementById("refresh").onclick  = async () => { if(SHARED) await pullShared(); renderAdmin(); toast("Atualizado."); };
-  document.getElementById("expJson").onclick  = exportJson;
-  document.getElementById("impJson").onclick  = () => document.getElementById("impFile").click();
-  document.getElementById("impFile").onchange = importJson;
-  document.getElementById("resetAll").onclick = async () => { if(confirm("Apagar todos os dados?")){ DB=structuredClone(DEFAULT); await persist(); renderAdmin(); } };
-  renderSvcList(); renderEmpMgr(); renderSubList();
+  document.getElementById("addSvc").onclick=async()=>{DB.services.push({id:uid(),name:"Novo serviço",turnos:[{code:"X",label:"Turno"}]});await persist();renderConfigTab();};
+  document.getElementById("expJson").onclick=exportJson;
+  document.getElementById("impJson").onclick=()=>document.getElementById("impFile").click();
+  document.getElementById("impFile").onchange=importJson;
+  document.getElementById("resetAll").onclick=async()=>{if(confirm("Apagar todos os dados?")){DB=structuredClone(DEFAULT);await persist();renderAdmin();}};
+  renderSvcList();
 }
 
-function renderSvcList() {
-  const el=document.getElementById("svcList");
+function renderSvcList(){
+  const el=document.getElementById("svcList");if(!el)return;
   el.innerHTML=DB.services.map(s=>`
-    <div class="svc-edit" data-s="${s.id}">
+    <div class="svc-edit">
       <div class="flex sp" style="margin-bottom:8px;">
         <input class="svcName" data-s="${s.id}" value="${s.name}" style="max-width:320px;">
-        <button class="btn danger delSvc" data-s="${s.id}">Apagar</button>
+        <button class="btn danger sm delSvc" data-s="${s.id}">Apagar</button>
       </div>
       <div class="flex">
-        ${s.turnos.map(t=>`<span class="turno-tag"><b>${t.code}</b> ${t.label}<button class="delT" data-s="${s.id}" data-c="${t.code}" title="remover">×</button></span>`).join("")}
-        <button class="btn ghost addT" data-s="${s.id}" style="padding:5px 11px;">+ turno</button>
+        ${s.turnos.map(t=>`<span class="turno-tag"><b>${t.code}</b> ${t.label}<button class="delT" data-s="${s.id}" data-c="${t.code}">×</button></span>`).join("")}
+        <button class="btn ghost sm addT" data-s="${s.id}">+ turno</button>
       </div>
     </div>`).join("")||`<p class="hint">Sem serviços.</p>`;
-  el.querySelectorAll(".svcName").forEach(i=>i.onchange=async e=>{DB.services.find(s=>s.id===e.target.dataset.s).name=e.target.value.trim()||"Serviço"; await persist();});
-  el.querySelectorAll(".delSvc").forEach(b=>b.onclick=async()=>{if(confirm("Apagar este serviço?")){DB.services=DB.services.filter(s=>s.id!==b.dataset.s); await persist(); renderAdmin();}});
-  el.querySelectorAll(".delT").forEach(b=>b.onclick=async()=>{const s=DB.services.find(x=>x.id===b.dataset.s); s.turnos=s.turnos.filter(t=>t.code!==b.dataset.c); await persist(); renderSvcList();});
-  el.querySelectorAll(".addT").forEach(b=>b.onclick=async()=>{const code=prompt("Código do turno:"); if(!code)return; const label=prompt("Descrição:")||code; const s=DB.services.find(x=>x.id===b.dataset.s); s.turnos.push({code:code.trim(),label:label.trim()}); await persist(); renderSvcList();});
-}
-function renderEmpMgr() {
-  const el=document.getElementById("empMgr");
-  if(!DB.employees.length){el.innerHTML=`<p class="hint">Ainda sem operacionais.</p>`;return;}
-  el.innerHTML=`<div class="flex">${DB.employees.map(e=>`<span class="turno-tag">${e.name}<button class="delE" data-e="${e.id}">×</button></span>`).join("")}</div>`;
-  el.querySelectorAll(".delE").forEach(b=>b.onclick=async()=>{DB.employees=DB.employees.filter(e=>e.id!==b.dataset.e); await persist(); renderEmpMgr();});
-}
-function renderSubList() {
-  const el=document.getElementById("subList");
-  const subs=DB.submissions.filter(s=>s.month===DB.period.month&&s.year===DB.period.year);
-  if(!subs.length){el.innerHTML=`<p class="hint">Sem submissões para ${MESES[DB.period.month]} ${DB.period.year}.</p>`;return;}
-  el.innerHTML=`<div style="overflow-x:auto;"><table><thead><tr><th>Nome</th><th>Serviço</th><th>Dias disponíveis</th><th></th></tr></thead><tbody>
-    ${subs.map(s=>{
-      const svc=DB.services.find(x=>x.id===s.service);
-      const days=Object.entries(s.sel).sort((a,b)=>+a[0]-+b[0]).map(([d])=>`<span class="tag">${d}</span>`).join("");
-      return `<tr><td>${s.name}</td><td>${svc?svc.name:s.service}</td><td>${days}</td><td><button class="btn ghost delSub" data-id="${s.id}" style="padding:5px 9px;color:var(--danger);">apagar</button></td></tr>`;
-    }).join("")}
-  </tbody></table></div>`;
-  el.querySelectorAll(".delSub").forEach(b=>b.onclick=async()=>{DB.submissions=DB.submissions.filter(s=>s.id!==b.dataset.id); await persist(); renderSubList();});
+  el.querySelectorAll(".svcName").forEach(i=>i.onchange=async e=>{DB.services.find(s=>s.id===e.target.dataset.s).name=e.target.value.trim()||"Serviço";await persist();});
+  el.querySelectorAll(".delSvc").forEach(b=>b.onclick=async()=>{if(confirm("Apagar este serviço?")){DB.services=DB.services.filter(s=>s.id!==b.dataset.s);await persist();renderConfigTab();}});
+  el.querySelectorAll(".delT").forEach(b=>b.onclick=async()=>{const s=DB.services.find(x=>x.id===b.dataset.s);s.turnos=s.turnos.filter(t=>t.code!==b.dataset.c);await persist();renderSvcList();});
+  el.querySelectorAll(".addT").forEach(b=>b.onclick=async()=>{const code=prompt("Código:");if(!code)return;const label=prompt("Descrição:")||code;const s=DB.services.find(x=>x.id===b.dataset.s);s.turnos.push({code:code.trim(),label:label.trim()});await persist();renderSvcList();});
 }
 
+/* ============================================================
+   EXPORTS
+   ============================================================ */
 function exportXlsx(){
   const {month,year}=DB.period;
   const dim=daysIn(month,year);
   const dayCols=[];
-  for(let d=1;d<=dim;d++){const dow=new Date(year,month,d).getDay(); dayCols.push(`${d}${(dow===0||dow===6)?" - "+(dow===0?"D":"S"):""}`);}
+  for(let d=1;d<=dim;d++){const dow=new Date(year,month,d).getDay();dayCols.push(`${d}${(dow===0||dow===6)?" - "+(dow===0?"D":"S"):""}`);}
   const wb=XLSX.utils.book_new();
   const usedNames=[];
   DB.services.forEach(svc=>{
     const subs=DB.submissions.filter(s=>s.service===svc.id&&s.month===month&&s.year===year);
-    const rows=[["Nº","Nome","Obs.",...dayCols]];
-    subs.forEach((s,i)=>{const row=[i+1,s.name,""]; for(let d=1;d<=dim;d++){const a=s.sel[d]; row.push(a&&a.length?"✓":"");} rows.push(row);});
-    if(!subs.length) rows.push(["","(sem submissões)","",...Array(dim).fill("")]);
+    const rows=[["Nº","Nome","Nº Mec.","Corpo","Obs.",...dayCols]];
+    subs.forEach((s,i)=>{
+      const row=[i+1,s.name,s.num||'',s.corpo||'',''];
+      for(let d=1;d<=dim;d++){const a=s.sel[d];row.push(a&&a.length?"✓":"");}
+      rows.push(row);
+    });
+    if(!subs.length)rows.push(['','(sem submissões)','','','',...Array(dim).fill('')]);
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"]=[{wch:5},{wch:24},{wch:8},...Array(dim).fill({wch:5})];
+    ws["!cols"]=[{wch:4},{wch:24},{wch:10},{wch:28},{wch:8},...Array(dim).fill({wch:5})];
     let nm=svc.name.replace(/[\\\/\?\*\[\]:]/g,"").slice(0,31)||"Serviço";
-    let base=nm,k=2; while(usedNames.includes(nm)){nm=(base.slice(0,28)+"_"+k).slice(0,31);k++;}
-    usedNames.push(nm); XLSX.utils.book_append_sheet(wb,ws,nm);
+    let base=nm,k=2;while(usedNames.includes(nm)){nm=(base.slice(0,28)+"_"+k).slice(0,31);k++;}
+    usedNames.push(nm);XLSX.utils.book_append_sheet(wb,ws,nm);
   });
   const leg=[["Serviço","Código","Significado"]];
   DB.services.forEach(s=>s.turnos.forEach(t=>leg.push([s.name,t.code,t.label])));
-  const wsl=XLSX.utils.aoa_to_sheet(leg); wsl["!cols"]=[{wch:20},{wch:10},{wch:30}];
+  const wsl=XLSX.utils.aoa_to_sheet(leg);wsl["!cols"]=[{wch:20},{wch:10},{wch:30}];
   XLSX.utils.book_append_sheet(wb,wsl,"Legenda");
   XLSX.writeFile(wb,`EscalaCPO_Apanhado_${MESES[month]}_${year}.xlsx`);
   toast("Ficheiro .xlsx gerado.");
 }
-function exportJson(){
-  const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`backup_cpo_${MESES[DB.period.month]}_${DB.period.year}.json`; a.click();
-}
-function importJson(e){
-  const f=e.target.files[0]; if(!f)return; const r=new FileReader();
-  r.onload=async()=>{try{const d=JSON.parse(r.result);
-    if(confirm("Importar substitui os dados atuais. Continuar?")){DB=d; await persist(); renderAdmin(); toast("Dados importados.");}
-  }catch(err){toast("Ficheiro inválido.");}};
-  r.readAsText(f); e.target.value="";
+
+function exportEscala(){
+  const {month,year}=DB.period;
+  if(!DB.schedule)DB.schedule={};
+  const dim=daysIn(month,year);
+  const rows=[["Dia","Dia Semana","Operacional","Nº Mecanográfico","Corpo de Bombeiros"]];
+  for(let d=1;d<=dim;d++){
+    const dow=new Date(year,month,d).getDay();
+    const key=String(d);
+    const agendados=DB.schedule[key]||[];
+    if(agendados.length){
+      agendados.forEach(p=>{
+        rows.push([d,DOW_FULL[dow],p.name,p.num||'',p.corpo||'']);
+      });
+    } else {
+      rows.push([d,DOW_FULL[dow],'—','','']);
+    }
+  }
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:6},{wch:12},{wch:28},{wch:16},{wch:32}];
+  // Zebra e fins de semana
+  for(let r=1;r<rows.length;r++){
+    const d=rows[r][0];if(isNaN(d))continue;
+    const dow=new Date(year,month,d).getDay();
+    if(dow===0||dow===6){
+      ['A','B','C','D','E'].forEach(col=>{
+        const ref=col+(r+1);
+        if(ws[ref])ws[ref].s={fill:{fgColor:{rgb:"FFF3E0"}}};
+      });
+    }
+  }
+  XLSX.utils.book_append_sheet(wb,ws,"Escala CPO");
+  XLSX.writeFile(wb,`EscalaCPO_${MESES[month]}_${year}.xlsx`);
+  toast("Escala exportada.");
 }
 
+function exportJson(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`backup_cpo_${MESES[DB.period.month]}_${DB.period.year}.json`;a.click();
+}
+function importJson(e){
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=async()=>{try{const d=JSON.parse(r.result);
+    if(confirm("Importar substitui os dados atuais. Continuar?")){DB=d;await persist();renderAdmin();toast("Dados importados.");}
+  }catch(err){toast("Ficheiro inválido.");}};
+  r.readAsText(f);e.target.value="";
+}
+
+/* ---- PWA ---- */
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;document.getElementById("installBar").style.display="flex";});
 document.getElementById("installBtn").onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById("installBar").style.display="none";};
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw-cpo.js?v=1").catch(()=>{}));
-}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw-cpo.js?v=2").catch(()=>{}));}
 
+/* ---- BOOT ---- */
 (async function(){
-  if (SHARED) {
-    auth.onAuthStateChanged(async user => {
-      if (user) { await enterApp(user); }
-      else { showLogin(); }
+  if(SHARED){
+    auth.onAuthStateChanged(async user=>{
+      if(user){await enterApp(user);}else{showLogin();}
     });
   } else {
-    elHeader.style.display = "flex";
-    elBody.style.display   = "block";
-    elLogin.style.display  = "none";
-    elAdminTab.style.display = "inline-block";
+    elHeader.style.display="flex";elBody.style.display="block";
+    elLogin.style.display="none";elAdminTab.style.display="inline-block";
     renderEmp();
   }
 })();
