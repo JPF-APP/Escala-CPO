@@ -139,7 +139,7 @@
 <div class="toast" id="toast"></div>
 
 <footer style="text-align:center;padding:18px 16px calc(18px + env(safe-area-inset-bottom));font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:8px;">
-  © JPF — Núcleo de Apoio às Operações-CSREPC Douro — 2026
+  © Núcleo de Apoio às Operações-CSREPC Douro — 2026 — Todos os Direitos Reservados
 </footer>
 
 <script>
@@ -211,7 +211,7 @@ async function pushShared(){
 }
 async function persist(){if(SHARED){await pushShared();}else{saveLocal();}}
 
-let emp={service:"cpo",name:"",num:"",corpo:"",sel:{}};
+let emp={service:"cpo",name:"",num:"",corpo:"",categoria:"",obs:"",sel:{}};
 let adminSubTab="submissoes";
 const empView=document.getElementById("empView");
 const adminView=document.getElementById("adminView");
@@ -263,7 +263,7 @@ async function doLogin(){
 }
 async function doLogout(){
   await auth.signOut();
-  SESSION=null;IS_ADMIN=false;emp={service:"cpo",name:"",num:"",corpo:"",sel:{}};
+  SESSION=null;IS_ADMIN=false;emp={service:"cpo",name:"",num:"",corpo:"",categoria:"",obs:"",sel:{}};
   document.getElementById("liEmail").value="";document.getElementById("liPass").value="";
   showLogin();
 }
@@ -333,17 +333,32 @@ function renderEmp(){
       <div class="row grid2" style="margin-bottom:12px;">
         <div>
           <label>Nome completo</label>
-          <input id="eName" list="empList" placeholder="O teu nome" value="${emp.name}">
+          <input id="eName" name="nome" list="empList" autocomplete="name" placeholder="" value="${emp.name}">
           <datalist id="empList">${DB.employees.map(e=>`<option value="${e.name}">`).join("")}</datalist>
         </div>
         <div>
           <label>Nº Mecanográfico</label>
-          <input id="eNum" type="text" placeholder="Ex: 12345" value="${emp.num}">
+          <input id="eNum" name="num_mecanografico" type="text" autocomplete="on" placeholder="" value="${emp.num}">
+        </div>
+      </div>
+      <div class="row grid2" style="margin-bottom:14px;">
+        <div>
+          <label>Corpo de Bombeiros</label>
+          <input id="eCorpo" name="corpo_bombeiros" type="text" autocomplete="organization" placeholder="" value="${emp.corpo}">
+        </div>
+        <div>
+          <label>Categoria</label>
+          <select id="eCategoria">
+            <option value="" ${!emp.categoria?'selected':''}>-- Seleciona --</option>
+            <option value="Comandante" ${emp.categoria==='Comandante'?'selected':''}>Comandante</option>
+            <option value="2º Comandante" ${emp.categoria==='2º Comandante'?'selected':''}>2º Comandante</option>
+            <option value="Adjunto de Comando" ${emp.categoria==='Adjunto de Comando'?'selected':''}>Adjunto de Comando</option>
+          </select>
         </div>
       </div>
       <div style="margin-bottom:14px;">
-        <label>Corpo de Bombeiros</label>
-        <input id="eCorpo" type="text" placeholder="Ex: Bombeiros Voluntários de Vila Real" value="${emp.corpo}">
+        <label>Observações <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+        <input id="eObs" name="observacoes" type="text" autocomplete="on" placeholder="" value="${emp.obs||''}">
       </div>
       <p class="hint" style="margin-bottom:8px;">Clica nos dias em que estás disponível para o <b>Turno CPO (22h–22h)</b>.</p>
       <div class="cal">${DOW.map((d,i)=>`<div class="dow${(i===0||i===6)?' we':''}">${d}</div>`).join("")}</div>
@@ -353,10 +368,34 @@ function renderEmp(){
         <button class="btn ghost" id="eClear">Limpar</button>
         <button class="btn primary" id="eSubmit">Submeter disponibilidade</button>
       </div>
+    </div>
+    <div class="card" style="margin-top:4px;">
+      <div class="flex sp" id="passToggleHd" style="cursor:pointer;" onclick="document.getElementById('passForm').style.display=document.getElementById('passForm').style.display==='none'?'block':'none'">
+        <h3 style="margin:0;font-size:14px;color:var(--muted);font-weight:500;">🔒 Alterar palavra-passe</h3>
+        <span style="font-size:12px;color:var(--muted);">▾</span>
+      </div>
+      <div id="passForm" style="display:none;margin-top:14px;">
+        <div style="margin-bottom:10px;">
+          <label>Palavra-passe atual</label>
+          <input id="passAtual" type="password" placeholder="A tua palavra-passe atual">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label>Nova palavra-passe</label>
+          <input id="passNova" type="password" placeholder="Mínimo 6 caracteres">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label>Confirmar nova palavra-passe</label>
+          <input id="passConfirm" type="password" placeholder="Repete a nova palavra-passe">
+        </div>
+        <div id="passMsg" style="display:none;padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
+        <button class="btn primary" id="passBtn" style="width:100%;">Alterar palavra-passe</button>
+      </div>
     </div>`;
   document.getElementById("eName").oninput=e=>emp.name=e.target.value;
   document.getElementById("eNum").oninput=e=>emp.num=e.target.value;
   document.getElementById("eCorpo").oninput=e=>emp.corpo=e.target.value;
+  document.getElementById("eCategoria").onchange=e=>emp.categoria=e.target.value;
+  document.getElementById("eObs").oninput=e=>emp.obs=e.target.value;
   document.getElementById("eClear").onclick=()=>{emp.sel={};renderEmp();};
   empView.querySelectorAll(".t").forEach(b=>b.onclick=()=>{
     const d=b.dataset.d,c=b.dataset.c;
@@ -367,24 +406,56 @@ function renderEmp(){
     renderEmp();
   });
   document.getElementById("eSubmit").onclick=submitEmp;
+  document.getElementById("passBtn").onclick=alterarPassword;
+}
+
+async function alterarPassword(){
+  const atual  = document.getElementById("passAtual").value;
+  const nova   = document.getElementById("passNova").value;
+  const conf   = document.getElementById("passConfirm").value;
+  const msg    = document.getElementById("passMsg");
+  function showMsg(texto,ok){
+    msg.textContent=texto;msg.style.display="block";
+    msg.style.background=ok?"var(--ok-soft)":"var(--danger-soft)";
+    msg.style.color=ok?"var(--ok)":"var(--danger)";
+  }
+  if(!atual||!nova||!conf){showMsg("Preenche todos os campos.",false);return;}
+  if(nova.length<6){showMsg("A nova palavra-passe tem de ter pelo menos 6 caracteres.",false);return;}
+  if(nova!==conf){showMsg("A confirmação não coincide com a nova palavra-passe.",false);return;}
+  if(nova===atual){showMsg("A nova palavra-passe tem de ser diferente da atual.",false);return;}
+  try{
+    const user=auth.currentUser;
+    const cred=firebase.auth.EmailAuthProvider.credential(user.email,atual);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(nova);
+    showMsg("Palavra-passe alterada com sucesso!",true);
+    document.getElementById("passAtual").value="";
+    document.getElementById("passNova").value="";
+    document.getElementById("passConfirm").value="";
+  }catch(e){
+    if(/wrong-password|invalid-credential/.test(e.code))showMsg("A palavra-passe atual está incorreta.",false);
+    else if(/requires-recent-login/.test(e.code))showMsg("Por segurança, sai e volta a entrar antes de alterar.",false);
+    else showMsg("Erro: "+(e.message||"não foi possível alterar."),false);
+  }
 }
 
 async function submitEmp(){
   if(!emp.name.trim()){toast("Escreve o teu nome primeiro.");return;}
   if(!emp.num.trim()){toast("Indica o teu Nº Mecanográfico.");return;}
   if(!emp.corpo.trim()){toast("Indica o teu Corpo de Bombeiros.");return;}
+  if(!emp.categoria){toast("Seleciona a tua Categoria.");return;}
   if(!Object.keys(emp.sel).length){toast("Marca pelo menos um dia.");return;}
   if(SHARED)await pullShared();
-  const name=emp.name.trim(),num=emp.num.trim(),corpo=emp.corpo.trim();
+  const name=emp.name.trim(),num=emp.num.trim(),corpo=emp.corpo.trim(),categoria=emp.categoria,obs=(emp.obs||"").trim();
   if(!DB.employees.find(e=>e.name.toLowerCase()===name.toLowerCase()))
-    DB.employees.push({id:uid(),name,num,corpo});
+    DB.employees.push({id:uid(),name,num,corpo,categoria});
   DB.submissions=DB.submissions.filter(s=>!(
     s.name.toLowerCase()===name.toLowerCase()&&
     s.service===emp.service&&s.month===DB.period.month&&s.year===DB.period.year
   ));
-  DB.submissions.push({id:uid(),name,num,corpo,service:emp.service,month:DB.period.month,year:DB.period.year,sel:structuredClone(emp.sel),at:Date.now()});
+  DB.submissions.push({id:uid(),name,num,corpo,categoria,obs,service:emp.service,month:DB.period.month,year:DB.period.year,sel:structuredClone(emp.sel),at:Date.now()});
   await persist();
-  emp.sel={};renderEmp();toast("Disponibilidade submetida. Obrigado!");
+  emp.sel={};emp.categoria="";emp.obs="";renderEmp();toast("Disponibilidade submetida. Obrigado!");
 }
 
 /* ============================================================
@@ -435,14 +506,16 @@ function renderSubTab(){
         <button class="btn sm" id="expXlsx">Exportar .xlsx</button>
       </div>
       ${subs.length?`<div style="overflow-x:auto;"><table>
-        <thead><tr><th>Nome</th><th>Nº Mec.</th><th>Corpo</th><th>Dias disponíveis</th><th></th></tr></thead>
+        <thead><tr><th>Nome</th><th>Nº Mec.</th><th>Corpo</th><th>Categoria</th><th>Dias disponíveis</th><th>Observações</th><th></th></tr></thead>
         <tbody>${subs.map(s=>{
           const days=Object.entries(s.sel).sort((a,b)=>+a[0]-+b[0]).map(([d])=>`<span class="tag">${d}</span>`).join("");
           return `<tr>
             <td>${s.name}</td>
             <td>${s.num||'—'}</td>
             <td>${s.corpo||'—'}</td>
+            <td>${s.categoria||'—'}</td>
             <td>${days}</td>
+            <td>${s.obs||''}</td>
             <td><button class="btn ghost delSub" data-id="${s.id}" style="padding:4px 8px;font-size:12px;color:var(--danger);">apagar</button></td>
           </tr>`;
         }).join("")}</tbody>
@@ -491,7 +564,7 @@ function renderEscalaTab(){
     const addOpts=todosOsNomes.map(n=>{
       const sub=subs.find(s=>s.name===n);
       const disp=dispNesteDia.find(s=>s.name===n);
-      return `<option value="${n}" data-num="${sub?.num||''}" data-corpo="${sub?.corpo||''}">${n}${disp?' ✓':''}${sub?.num?' ('+sub.num+')':''}</option>`;
+      return `<option value="${n}" data-num="${sub?.num||''}" data-corpo="${sub?.corpo||''}" data-categoria="${sub?.categoria||''}">${n}${disp?' ✓':''}${sub?.num?' ('+sub.num+')':''}</option>`;
     }).join("");
 
     grid+=`<div class="escala-day ${we}">
@@ -550,9 +623,10 @@ function renderEscalaTab(){
     const opt=e.target.selectedOptions[0];
     const num=opt.dataset.num||'';
     const corpo=opt.dataset.corpo||'';
+    const categoria=opt.dataset.categoria||'';
     if(!DB.schedule[d])DB.schedule[d]=[];
     if(!DB.schedule[d].find(p=>p.name===nome))
-      DB.schedule[d].push({name:nome,num,corpo});
+      DB.schedule[d].push({name:nome,num,corpo,categoria});
     await persist();renderEscalaTab();
   });
 
@@ -575,6 +649,24 @@ function renderGestaoTab(){
         <div><button class="btn primary" id="acCreate" style="width:100%;">Criar conta</button></div>
       </div>
       <p class="hint" id="acHint" style="margin-top:10px;"></p>
+      <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
+      <div class="flex sp" style="margin-bottom:8px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <p style="margin:0;font-size:14px;font-weight:600;">Importar contas via Excel</p>
+          <p class="hint" style="margin-top:2px;">Ficheiro .xlsx com colunas: <b>Nome · Email · Password</b> (1ª linha pode ser cabeçalho)</p>
+        </div>
+        <div class="flex" style="gap:8px;">
+          <button class="btn sm" id="dlTemplate">⬇ Modelo</button>
+          <button class="btn primary sm" id="impXlsxContas">📥 Importar Excel</button>
+        </div>
+      </div>
+      <div id="impProgress" style="display:none;margin-top:10px;">
+        <div style="background:#f0f2f5;border-radius:8px;overflow:hidden;height:8px;margin-bottom:8px;">
+          <div id="impBar" style="background:var(--accent);height:100%;width:0%;transition:width .3s;"></div>
+        </div>
+        <p class="hint" id="impStatus" style="margin:0;"></p>
+      </div>
+      <input type="file" id="impXlsxFile" accept=".xlsx,.xls" style="display:none;">
     </div>
     <div class="card">
       <div class="flex sp"><h3 style="margin:0;font-size:15px;">Operacionais (${DB.employees.length})</h3>
@@ -586,6 +678,9 @@ function renderGestaoTab(){
     const n=prompt("Nome do operacional:");
     if(n&&n.trim()){DB.employees.push({id:uid(),name:n.trim()});await persist();renderGestaoTab();}
   };
+  document.getElementById("dlTemplate").onclick=downloadTemplate;
+  document.getElementById("impXlsxContas").onclick=()=>document.getElementById("impXlsxFile").click();
+  document.getElementById("impXlsxFile").onchange=importXlsxContas;
   renderEmpMgr();
 }
 
@@ -652,6 +747,80 @@ function renderSvcList(){
 /* ============================================================
    EXPORTS
    ============================================================ */
+/* ============================================================
+   IMPORTAÇÃO DE CONTAS VIA EXCEL
+   ============================================================ */
+function downloadTemplate(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([
+    ["Nome","Email","Password"],
+    ["João Silva","joao.silva@email.pt","senha123"],
+    ["Maria Santos","maria.santos@email.pt","senha456"]
+  ]);
+  ws["!cols"]=[{wch:28},{wch:32},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,"Contas");
+  XLSX.writeFile(wb,"modelo_contas_cpo.xlsx");
+}
+
+async function importXlsxContas(e){
+  const f=e.target.files[0];if(!f)return;
+  e.target.value="";
+  const progress=document.getElementById("impProgress");
+  const bar=document.getElementById("impBar");
+  const status=document.getElementById("impStatus");
+  progress.style.display="block";
+  bar.style.width="0%";
+  status.textContent="A ler o ficheiro...";
+
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      if(!rows.length){status.textContent="Ficheiro vazio.";return;}
+
+      // Detectar se 1ª linha é cabeçalho
+      const first=rows[0].map(c=>String(c).toLowerCase());
+      const hasHeader=first.includes("nome")||first.includes("email")||first.includes("password");
+      const data=hasHeader?rows.slice(1):rows;
+      const validas=data.filter(r=>r[0]&&r[1]&&r[2]&&String(r[1]).includes("@"));
+
+      if(!validas.length){status.textContent="Nenhuma linha válida encontrada. Verifica as colunas Nome, Email, Password.";return;}
+
+      status.textContent=`A criar ${validas.length} conta(s)...`;
+      let ok=0,erros=[];
+      for(let i=0;i<validas.length;i++){
+        const nome=String(validas[i][0]).trim();
+        const email=String(validas[i][1]).trim();
+        const pass=String(validas[i][2]).trim();
+        bar.style.width=Math.round(((i+1)/validas.length)*100)+"%";
+        status.textContent=`A criar conta ${i+1} de ${validas.length}: ${nome}...`;
+        if(pass.length<6){erros.push(`${nome}: password demasiado curta (mín. 6 caracteres)`);continue;}
+        try{
+          const secAuth=getSecondaryAuth();
+          const cred=await secAuth.createUserWithEmailAndPassword(email,pass);
+          await cred.user.updateProfile({displayName:nome});
+          await secAuth.signOut();
+          if(!DB.employees.find(x=>x.name.toLowerCase()===nome.toLowerCase()))
+            DB.employees.push({id:uid(),name:nome,email});
+          ok++;
+        }catch(err){
+          if(/email-already-in-use/.test(err.code))erros.push(`${nome}: email já existe`);
+          else erros.push(`${nome}: ${err.message}`);
+        }
+      }
+      await persist();
+      bar.style.width="100%";
+      let msg=`✓ ${ok} conta(s) criada(s) com sucesso.`;
+      if(erros.length)msg+=` ${erros.length} erro(s): ${erros.join(" | ")}`;
+      status.textContent=msg;
+      renderEmpMgr();
+    }catch(err){status.textContent="Erro ao ler o ficheiro: "+err.message;}
+  };
+  reader.readAsArrayBuffer(f);
+}
+
 function exportXlsx(){
   const {month,year}=DB.period;
   const dim=daysIn(month,year);
@@ -661,9 +830,9 @@ function exportXlsx(){
   const usedNames=[];
   DB.services.forEach(svc=>{
     const subs=DB.submissions.filter(s=>s.service===svc.id&&s.month===month&&s.year===year);
-    const rows=[["Nº","Nome","Nº Mec.","Corpo","Obs.",...dayCols]];
+    const rows=[["Nº","Nome","Nº Mec.","Corpo","Categoria","Observações",...dayCols]];
     subs.forEach((s,i)=>{
-      const row=[i+1,s.name,s.num||'',s.corpo||'',''];
+      const row=[i+1,s.name,s.num||'',s.corpo||'',s.categoria||'',s.obs||''];
       for(let d=1;d<=dim;d++){const a=s.sel[d];row.push(a&&a.length?"✓":"");}
       rows.push(row);
     });
@@ -686,17 +855,17 @@ function exportEscala(){
   const {month,year}=DB.period;
   if(!DB.schedule)DB.schedule={};
   const dim=daysIn(month,year);
-  const rows=[["Dia","Dia Semana","Operacional","Nº Mecanográfico","Corpo de Bombeiros"]];
+  const rows=[["Dia","Dia Semana","Operacional","Nº Mecanográfico","Corpo de Bombeiros","Categoria"]];
   for(let d=1;d<=dim;d++){
     const dow=new Date(year,month,d).getDay();
     const key=String(d);
     const agendados=DB.schedule[key]||[];
     if(agendados.length){
       agendados.forEach(p=>{
-        rows.push([d,DOW_FULL[dow],p.name,p.num||'',p.corpo||'']);
+        rows.push([d,DOW_FULL[dow],p.name,p.num||'',p.corpo||'',p.categoria||'']);
       });
     } else {
-      rows.push([d,DOW_FULL[dow],'—','','']);
+      rows.push([d,DOW_FULL[dow],'—','','','']);
     }
   }
   const wb=XLSX.utils.book_new();
