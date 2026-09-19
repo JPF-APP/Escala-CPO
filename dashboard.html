@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#C25A0C">
+<title>Dashboard CPO — Disponibilidades</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --accent:#C25A0C;--accent-soft:#FDEBD8;--accent-ink:#7D3408;
+    --bg:#FFF8F2;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#F0CCA8;
+    --ok:#0F6E56;--ok-soft:#E1F5EE;
+    --weekend-bg:#FFF3E0;--weekend-border:#FFCC80;--weekend-num:#B07000;
+    --c0:#f3f4f6;--c1:#FDEBD8;--c2:#FDCFA8;--c3:#F9A468;--c4:#E07030;--c5:#C25A0C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh;}
+  header{background:var(--accent);color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  header h1{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+  header .sub{font-size:13px;opacity:.85;margin-top:2px;}
+  .badge{background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:13px;}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 16px;}
+
+  /* Sumário */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+  .stat-val{font-size:32px;font-weight:700;color:var(--accent);}
+  .stat-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  /* Calendário */
+  .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:24px;}
+  .cal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .cal-hd h2{font-size:16px;font-weight:600;}
+  .legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+  .leg-dot{width:14px;height:14px;border-radius:4px;}
+  .dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .dow{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:4px 0;}
+  .dow.we{color:var(--weekend-num);}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cell{border-radius:10px;padding:8px 6px;min-height:80px;border:1px solid transparent;cursor:pointer;transition:transform .1s,box-shadow .1s;position:relative;}
+  .cell:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+  .cell.empty{background:transparent;border:none;cursor:default;}
+  .cell.empty:hover{transform:none;box-shadow:none;}
+  .cell.weekend{border-color:var(--weekend-border);}
+  .cell-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+  .cell-day{font-size:13px;font-weight:700;}
+  .cell-count{font-size:11px;font-weight:700;background:rgba(0,0,0,.12);border-radius:10px;padding:1px 6px;min-width:20px;text-align:center;}
+  .cell-names{font-size:10px;line-height:1.4;overflow:hidden;}
+  .cell-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* Cores por quantidade */
+  .c0{background:var(--c0);color:#6b7280;}
+  .c1{background:var(--c1);color:#7D3408;}
+  .c2{background:var(--c2);color:#7D3408;}
+  .c3{background:var(--c3);color:#5a2406;}
+  .c4{background:var(--c4);color:#fff;}
+  .c5{background:var(--c5);color:#fff;}
+
+  /* Painel lateral / modal de detalhe */
+  .detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;align-items:center;justify-content:center;}
+  .detail-overlay.show{display:flex;}
+  .detail-box{background:#fff;border-radius:16px;padding:24px;max-width:460px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .detail-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .detail-hd h3{font-size:17px;font-weight:700;}
+  .detail-close{border:none;background:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;}
+  .detail-person{padding:10px 12px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;}
+  .detail-person:last-child{border:none;}
+  .detail-name{font-weight:600;font-size:14px;}
+  .detail-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .detail-cat{font-size:11px;background:var(--accent-soft);color:var(--accent-ink);padding:2px 8px;border-radius:8px;white-space:nowrap;align-self:center;}
+
+  /* Tabela resumo */
+  .tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto;}
+  .tbl-wrap h2{font-size:16px;font-weight:600;margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:#f7f8fa;color:var(--muted);font-weight:600;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);}
+  td{padding:8px 12px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border:none;}
+  tr:hover td{background:#fafafa;}
+  .bar-wrap{background:#f0f2f5;border-radius:20px;height:8px;width:100%;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:20px;background:var(--accent);transition:width .3s;}
+
+  /* Estado */
+  .state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .state-icon{font-size:48px;margin-bottom:12px;}
+  .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  footer{text-align:center;padding:20px;font-size:11px;color:var(--muted);margin-top:8px;}
+  @media(max-width:600px){
+    .grid,.dow-row{grid-template-columns:repeat(7,1fr);}
+    .cell{min-height:56px;padding:5px 4px;}
+    .cell-names{display:none;}
+    .summary{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Dashboard CPO — Disponibilidades</h1>
+    <div class="sub">Comando Sub Regional do Douro</div>
+  </div>
+  <div id="headerBadge" class="badge">A carregar...</div>
+</header>
+
+<div class="wrap">
+  <div id="summaryRow" class="summary" style="display:none;"></div>
+
+  <div class="cal-wrap">
+    <div class="cal-hd">
+      <h2 id="calTitle">—</h2>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot c0"></div> 0</div>
+        <div class="leg-item"><div class="leg-dot c1"></div> 1-2</div>
+        <div class="leg-item"><div class="leg-dot c2"></div> 3-4</div>
+        <div class="leg-item"><div class="leg-dot c3"></div> 5-6</div>
+        <div class="leg-item"><div class="leg-dot c4"></div> 7-8</div>
+        <div class="leg-item"><div class="leg-dot c5"></div> 9+</div>
+      </div>
+    </div>
+    <div class="dow-row">
+      <div class="dow">Dom</div><div class="dow">Seg</div><div class="dow">Ter</div>
+      <div class="dow">Qua</div><div class="dow">Qui</div><div class="dow">Sex</div>
+      <div class="dow we">Sáb</div>
+    </div>
+    <div id="calGrid" class="grid"><div class="state"><div class="state-icon">📅</div><p>A carregar dados...</p></div></div>
+  </div>
+
+  <div class="tbl-wrap" id="tblWrap" style="display:none;">
+    <h2>Resumo por dia</h2>
+    <table id="resumoTable">
+      <thead><tr><th>Dia</th><th>Dia Semana</th><th>Disponíveis</th><th>Ocupação</th></tr></thead>
+      <tbody id="resumoBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal detalhe -->
+<div class="detail-overlay" id="overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-box">
+    <div class="detail-hd">
+      <h3 id="detailTitle">—</h3>
+      <button class="detail-close" onclick="closeDetail()">×</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<footer>
+  <span class="live-dot"></span> Atualização em tempo real &nbsp;·&nbsp;
+  © Núcleo de Apoio às Operações-CSREPC Douro — 2026 — Todos os Direitos Reservados
+</footer>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAYGeVwWYxv4y_gcWlatIFO_P_v7yiVLTQ",
+  authDomain: "escala-cpo.firebaseapp.com",
+  projectId: "escala-cpo",
+  storageBucket: "escala-cpo.firebasestorage.app",
+  messagingSenderId: "357159211436",
+  appId: "1:357159211436:web:d4e92173958d1c405f6a09"
+};
+
+const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DOW_FULL=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+let DB=null;
+
+function countColor(n){
+  if(n===0)return "c0";
+  if(n<=2)return "c1";
+  if(n<=4)return "c2";
+  if(n<=6)return "c3";
+  if(n<=8)return "c4";
+  return "c5";
+}
+
+function daysIn(m,y){return new Date(y,m+1,0).getDate();}
+function firstDow(m,y){return new Date(y,m,1).getDay();}
+
+function render(){
+  if(!DB)return;
+  const {month,year}=DB.period;
+  const subs=DB.submissions.filter(s=>s.month===month&&s.year===year);
+  const dim=daysIn(month,year);
+  const lead=firstDow(month,year);
+
+  // Sumário
+  const totalSubs=subs.length;
+  const diasComDisp=[];
+  for(let d=1;d<=dim;d++){
+    const count=subs.filter(s=>s.sel&&s.sel[String(d)]).length;
+    if(count>0)diasComDisp.push(count);
+  }
+  const maxDia=diasComDisp.length?Math.max(...diasComDisp):0;
+  const mediaDia=diasComDisp.length?(diasComDisp.reduce((a,b)=>a+b,0)/diasComDisp.length).toFixed(1):0;
+  const diasCobertos=diasComDisp.length;
+
+  const sumRow=document.getElementById("summaryRow");
+  sumRow.style.display="grid";
+  sumRow.innerHTML=`
+    <div class="stat"><div class="stat-val">${totalSubs}</div><div class="stat-lbl">Operacionais com submissão</div></div>
+    <div class="stat"><div class="stat-val">${diasCobertos}</div><div class="stat-lbl">Dias com disponibilidade</div></div>
+    <div class="stat"><div class="stat-val">${maxDia}</div><div class="stat-lbl">Máximo num dia</div></div>
+    <div class="stat"><div class="stat-val">${mediaDia}</div><div class="stat-lbl">Média por dia</div></div>`;
+
+  // Título calendário
+  document.getElementById("calTitle").textContent=`${MESES[month]} ${year}`;
+  document.getElementById("headerBadge").innerHTML=`<span class="live-dot"></span>${MESES[month]} ${year}`;
+
+  // Calendário
+  let cells="";
+  for(let i=0;i<lead;i++)cells+=`<div class="cell empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const dow=new Date(year,month,d).getDay();
+    const we=(dow===0||dow===6)?"weekend":"";
+    const dispHoje=subs.filter(s=>s.sel&&s.sel[String(d)]);
+    const count=dispHoje.length;
+    const cls=countColor(count);
+    const names=dispHoje.slice(0,4).map(s=>`<span class="cell-name">${s.name.split(" ")[0]}</span>`).join("");
+    const more=count>4?`<span class="cell-name" style="opacity:.6;">+${count-4} mais</span>`:"";
+    cells+=`<div class="cell ${cls} ${we}" onclick="showDetail(${d})">
+      <div class="cell-top">
+        <span class="cell-day">${d}</span>
+        <span class="cell-count">${count}</span>
+      </div>
+      <div class="cell-names">${names}${more}</div>
+    </div>`;
+  }
+  document.getElementById("calGrid").innerHTML=cells;
+
+  // Tabela resumo
+  const tbl=document.getElementById("tblWrap");
+  tbl.style.display="block";
+  const maxCount=Math.max(1,...Array.from({length:dim},(_,i)=>subs.filter(s=>s.sel&&s.sel[String(i+1)]).length));
+  let rows="";
+  for(let d=1;d<=dim;d++){
+    const dow=new Date(year,month,d).getDay();
+    const count=subs.filter(s=>s.sel&&s.sel[String(d)]).length;
+    const pct=Math.round((count/maxCount)*100);
+    const we=(dow===0||dow===6)?`style="background:var(--weekend-bg)"`:""
+    rows+=`<tr ${we}>
+      <td><b>${d}</b></td>
+      <td>${DOW_FULL[dow]}</td>
+      <td>${count} elemento${count!==1?"s":""}</td>
+      <td style="min-width:120px;"><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+    </tr>`;
+  }
+  document.getElementById("resumoBody").innerHTML=rows;
+}
+
+function showDetail(d){
+  if(!DB)return;
+  const {month,year}=DB.period;
+  const dow=new Date(year,month,d).getDay();
+  const subs=DB.submissions.filter(s=>s.month===month&&s.year===year&&s.sel&&s.sel[String(d)]);
+  document.getElementById("detailTitle").textContent=`${d} de ${MESES[month]} — ${DOW_FULL[dow]} (${subs.length} disponível${subs.length!==1?"is":""})`;
+  if(!subs.length){
+    document.getElementById("detailBody").innerHTML=`<p style="padding:20px;text-align:center;color:var(--muted);">Nenhum operacional disponível neste dia.</p>`;
+  } else {
+    document.getElementById("detailBody").innerHTML=subs.map(s=>`
+      <div class="detail-person">
+        <div>
+          <div class="detail-name">${s.name}</div>
+          <div class="detail-sub">${s.corpo||'—'} ${s.num?'· Nº '+s.num:''}</div>
+          ${s.obs?`<div class="detail-sub" style="font-style:italic;">Obs: ${s.obs}</div>`:''}
+        </div>
+        <div class="detail-cat">${s.categoria||'—'}</div>
+      </div>`).join("");
+  }
+  document.getElementById("overlay").classList.add("show");
+}
+function closeDetail(){document.getElementById("overlay").classList.remove("show");}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
+
+// Boot — autenticação anónima + listener em tempo real
+auth.signInAnonymously()
+  .then(()=>{
+    db.collection("app_state").doc("cpo-main")
+      .onSnapshot(snap=>{
+        if(snap.exists){
+          DB=snap.data();
+          if(!DB.schedule)DB.schedule={};
+          render();
+        } else {
+          document.getElementById("calGrid").innerHTML=`<div class="state"><div class="state-icon">📭</div><p>Ainda não há dados disponíveis.</p></div>`;
+        }
+      },err=>{
+        document.getElementById("calGrid").innerHTML=`<div class="state"><div class="state-icon">⚠️</div><p>Erro ao carregar dados: ${err.message}</p></div>`;
+      });
+  })
+  .catch(err=>{
+    document.getElementById("calGrid").innerHTML=`<div class="state"><div class="state-icon">🔒</div><p>Não foi possível ligar. Verifica se a autenticação anónima está ativa no Firebase.</p></div>`;
+  });
+</script>
+</body>
+</html>
