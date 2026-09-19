@@ -202,7 +202,13 @@ async function pullShared(){
   try{const snap=await db.collection("app_state").doc(DOC_ID).get();
     if(snap.exists){DB=snap.data();if(!DB.schedule)DB.schedule={};}
     else{await pushShared();}
-  }catch(e){toast("Sem ligação ao servidor — modo local.");SHARED=false;}
+  }catch(e){
+    if(e.code==='permission-denied'||e.message?.includes('permission')){
+      toast("Sem permissão para aceder aos dados. Verifica as regras do Firestore.");
+    } else {
+      toast("Sem ligação ao servidor — modo local.");
+    }
+  }
 }
 async function pushShared(){
   if(!SHARED){saveLocal();return;}
@@ -911,6 +917,14 @@ if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.se
   if(SHARED){
     auth.onAuthStateChanged(async user=>{
       if(user){await enterApp(user);}else{showLogin();}
+    });
+    // Refresh automático quando a app volta ao primeiro plano (ex: PWA minimizada)
+    document.addEventListener("visibilitychange",async()=>{
+      if(document.visibilityState==="visible"&&SESSION&&SHARED){
+        await pullShared();
+        const activeTab=document.querySelector("#seg button.on")?.dataset?.v;
+        if(activeTab==="admin")renderAdmin();else renderEmp();
+      }
     });
   } else {
     elHeader.style.display="flex";elBody.style.display="block";
