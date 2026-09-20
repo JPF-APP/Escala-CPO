@@ -472,7 +472,10 @@ async function submitEmp(){
     const diasLista = Object.keys(emp.sel).sort((a,b)=>+a-+b).join(", ");
     const mesAno = MESES[DB.period.month] + " " + DB.period.year;
     emailjs.send("service_itxylyq","template_7wocfn8",{
-      nome: name,
+      to_email: userEmail,
+      email: userEmail,
+      name: name,
+      title: "Disponibilidade CPO — " + mesAno,
       mes_ano: mesAno,
       dias: diasLista
     }).catch(()=>{}); // silencioso se falhar
