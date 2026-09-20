@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root{
     --bg:#FFF8F2;--card:#fff;--ink:#1f2430;--muted:#6b7280;--line:#F0CCA8;
@@ -463,32 +463,33 @@ async function submitEmp(){
     s.name.toLowerCase()===name.toLowerCase()&&
     s.service===emp.service&&s.month===DB.period.month&&s.year===DB.period.year
   ));
-  DB.submissions.push({id:uid(),name,num,corpo,categoria,obs,service:emp.service,month:DB.period.month,year:DB.period.year,sel:structuredClone(emp.sel),at:Date.now()});
+  const submissaoGuardada={id:uid(),name,num,corpo,categoria,obs,service:emp.service,month:DB.period.month,year:DB.period.year,sel:structuredClone(emp.sel),at:Date.now()};
+  DB.submissions.push(submissaoGuardada);
   await persist();
 
-  // Enviar email de confirmação
-  const userEmail = SESSION?.email || auth.currentUser?.email || "";
-  const diasOrdenados = Object.keys(emp.sel).map(Number).sort((a,b)=>a-b).join(", ");
-  const mesAno = MESES[DB.period.month] + " " + DB.period.year;
-  if(userEmail){
-    emailjs.send("service_itxylyq","template_7wocfn8",{
-      to_email: userEmail,
-      email: userEmail,
-      name: name,
-      title: "Disponibilidade CPO — " + mesAno,
-      mes_ano: mesAno,
-      dias: diasOrdenados
-    }).then(()=>{
-      toast("Disponibilidade submetida. Email de confirmação enviado!");
-    }).catch(err=>{
-      console.error("EmailJS erro:",err);
-      toast("Disponibilidade submetida. (Email não enviado)");
-    });
-  } else {
-    toast("Disponibilidade submetida. Obrigado!");
-  }
-
   emp.sel={};emp.categoria="";emp.obs="";renderEmp();
+  toast("Disponibilidade submetida. Obrigado!");
+
+  // Enviar email de confirmação
+  setTimeout(async()=>{
+    try{
+      const user=auth.currentUser;
+      if(!user||!user.email)return;
+      const dias=Object.keys(submissaoGuardada.sel).map(Number).sort((a,b)=>a-b).join(", ");
+      const mesAno=MESES[submissaoGuardada.month]+" "+submissaoGuardada.year;
+      await emailjs.send("service_itxylyq","template_7wocfn8",{
+        to_email:user.email,
+        email:user.email,
+        name:submissaoGuardada.name,
+        title:"Disponibilidade CPO — "+mesAno,
+        mes_ano:mesAno,
+        dias:dias
+      });
+      toast("Email de confirmação enviado!");
+    }catch(err){
+      console.error("EmailJS erro:",err);
+    }
+  },500);
 }
 
 /* ============================================================
