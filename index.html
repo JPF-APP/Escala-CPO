@@ -477,13 +477,18 @@ async function submitEmp(){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          to: user.email,
-          subject: "Disponibilidade CPO — "+mesAno+" submetida",
-          html: `<p>Olá <b>${submissaoGuardada.name}</b>,</p>
-                 <p>A tua disponibilidade para <b>${mesAno}</b> foi submetida com sucesso.</p>
+          to: ["freitas89@outlook.pt","jose.requeijo@prociv.pt","celina.martins@prociv.pt"],
+          subject: "Nova submissão CPO — "+submissaoGuardada.name+" ("+mesAno+")",
+          html: `<p><b>Nova disponibilidade submetida</b></p>
+                 <p><b>Operacional:</b> ${submissaoGuardada.name}</p>
+                 <p><b>Nº Mecanográfico:</b> ${submissaoGuardada.num||'—'}</p>
+                 <p><b>Corpo:</b> ${submissaoGuardada.corpo||'—'}</p>
+                 <p><b>Categoria:</b> ${submissaoGuardada.categoria||'—'}</p>
+                 <p><b>Mês:</b> ${mesAno}</p>
                  <p><b>Dias disponíveis:</b> ${dias}</p>
+                 ${submissaoGuardada.obs?'<p><b>Observações:</b> '+submissaoGuardada.obs+'</p>':''}
                  <br>
-                 <p>Obrigado,<br>Núcleo de Apoio às Operações-CSREPC Douro</p>`
+                 <p><i>Escala CPO — Núcleo de Apoio às Operações-CSREPC Douro</i></p>`
         })
       });
       if(res.ok)toast("Email de confirmação enviado!");
