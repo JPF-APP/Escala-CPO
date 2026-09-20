@@ -467,21 +467,28 @@ async function submitEmp(){
   await persist();
 
   // Enviar email de confirmação
-  const userEmail = auth.currentUser?.email;
+  const userEmail = SESSION?.email || auth.currentUser?.email || "";
+  const diasOrdenados = Object.keys(emp.sel).map(Number).sort((a,b)=>a-b).join(", ");
+  const mesAno = MESES[DB.period.month] + " " + DB.period.year;
   if(userEmail){
-    const diasLista = Object.keys(emp.sel).sort((a,b)=>+a-+b).join(", ");
-    const mesAno = MESES[DB.period.month] + " " + DB.period.year;
     emailjs.send("service_itxylyq","template_7wocfn8",{
       to_email: userEmail,
       email: userEmail,
       name: name,
       title: "Disponibilidade CPO — " + mesAno,
       mes_ano: mesAno,
-      dias: diasLista
-    }).catch(()=>{}); // silencioso se falhar
+      dias: diasOrdenados
+    }).then(()=>{
+      toast("Disponibilidade submetida. Email de confirmação enviado!");
+    }).catch(err=>{
+      console.error("EmailJS erro:",err);
+      toast("Disponibilidade submetida. (Email não enviado)");
+    });
+  } else {
+    toast("Disponibilidade submetida. Obrigado!");
   }
 
-  emp.sel={};emp.categoria="";emp.obs="";renderEmp();toast("Disponibilidade submetida. Email de confirmação enviado!");
+  emp.sel={};emp.categoria="";emp.obs="";renderEmp();
 }
 
 /* ============================================================
