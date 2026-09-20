@@ -473,13 +473,7 @@ async function submitEmp(){
       if(!user||!user.email)return;
       const dias=Object.keys(submissaoGuardada.sel).map(Number).sort((a,b)=>a-b).join(", ");
       const mesAno=MESES[submissaoGuardada.month]+" "+submissaoGuardada.year;
-      const res=await fetch("https://divine-shape-0117.freitas89.workers.dev/",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          to: ["freitas89@outlook.pt","jose.requeijo@prociv.pt","celina.martins@prociv.pt"],
-          subject: "Nova submissão CPO — "+submissaoGuardada.name+" ("+mesAno+")",
-          html: `<p><b>Nova disponibilidade submetida</b></p>
+      const emailHtml=`<p><b>Nova disponibilidade submetida</b></p>
                  <p><b>Operacional:</b> ${submissaoGuardada.name}</p>
                  <p><b>Nº Mecanográfico:</b> ${submissaoGuardada.num||'—'}</p>
                  <p><b>Corpo:</b> ${submissaoGuardada.corpo||'—'}</p>
@@ -488,10 +482,17 @@ async function submitEmp(){
                  <p><b>Dias disponíveis:</b> ${dias}</p>
                  ${submissaoGuardada.obs?'<p><b>Observações:</b> '+submissaoGuardada.obs+'</p>':''}
                  <br>
-                 <p><i>Escala CPO — Núcleo de Apoio às Operações-CSREPC Douro</i></p>`
-        })
-      });
-      if(res.ok)toast("Email de confirmação enviado!");
+                 <p><i>Escala CPO — Núcleo de Apoio às Operações-CSREPC Douro</i></p>`;
+      const emailSubject="Nova submissão CPO — "+submissaoGuardada.name+" ("+mesAno+")";
+      const NOTIF_EMAILS=["freitas89@outlook.pt","jose.requeijo@prociv.pt","celina.martins@prociv.pt"];
+      await Promise.all(NOTIF_EMAILS.map(to=>
+        fetch("https://divine-shape-0117.freitas89.workers.dev/",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({to,subject:emailSubject,html:emailHtml})
+        }).catch(()=>{})
+      ));
+      toast("Notificação enviada!");
     }catch(err){
       console.error("Email erro:",err);
     }
