@@ -937,41 +937,89 @@ function exportEscalaModelo(){
   if(!DB.schedule)DB.schedule={};
   const dim=daysIn(month,year);
   const MESES_PT=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  const hoje=new Date();
   const wb=XLSX.utils.book_new();
   const ws={};
 
-  // Estilos base
-  const bold={bold:true};
-  const center={horizontal:"center",vertical:"center"};
-  const wrap={wrapText:true,vertical:"center"};
+  // Abreviaturas de categoria
+  function catAbrev(cat){
+    if(!cat)return "";
+    if(cat==="Comandante")return "CMDT";
+    if(cat==="2º Comandante")return "2CMDT";
+    if(cat==="Adjunto de Comando")return "ADJ";
+    return cat;
+  }
+
+  // Conteúdo de cada célula: "CMDT BV Cruz Verde
+Nome"
+  function personCell(p){
+    if(!p||!p.name)return "";
+    const cat=catAbrev(p.categoria||"");
+    const corpo=p.corpo||"";
+    const linha1=[cat,corpo].filter(Boolean).join(" ");
+    return linha1+"
+"+p.name;
+  }
+
+  // Estilos
   const greenFill={patternType:"solid",fgColor:{rgb:"FF92D050"}};
   const yellowFill={patternType:"solid",fgColor:{rgb:"FFFFFF00"}};
   const blueFill={patternType:"solid",fgColor:{rgb:"FF00B0F0"}};
-  const thinBorder={style:"thin",color:{auto:1}};
-  const allBorders={top:thinBorder,bottom:thinBorder,left:thinBorder,right:thinBorder};
+  const grayFill={patternType:"solid",fgColor:{rgb:"FFD9D9D9"}};
 
-  // Linha 1: Cabeçalho DECIR
-  ws["C1"]={v:`DECIR ${year}                    EMPENHAMENTO REFORÇADO DE NIVEL BRAVO`,t:"s",
-    s:{font:{sz:20},alignment:{horizontal:"left",vertical:"center"}}};
+  const medThin={style:"medium",color:{auto:1}};
+  const hairThin={style:"hair",color:{auto:1}};
+  const thinThin={style:"thin",color:{auto:1}};
+  const medBorder={top:medThin,bottom:hairThin,left:medThin,right:hairThin};
+  const innerBorder={top:medThin,bottom:hairThin,left:hairThin,right:hairThin};
+  const headerBorder={top:medThin,bottom:medThin,left:medThin,right:hairThin};
 
-  // Linha 2: Autoridade + período
-  ws["A2"]={v:"AUTORIDADE NACIONAL DE EMERGÊNCIA E PROTEÇÃO CIVIL                   COMANDO SUB-REGIONAL DE EMERGÊNCIA E PROTEÇÃO CIVIL DO DOURO",t:"s",
-    s:{font:{bold:true,sz:10},alignment:{wrapText:true,vertical:"center"}}};
-  ws["G2"]={v:`01 A ${dim} DE ${MESES_PT[month].toUpperCase()} ${year}`,t:"s",
-    s:{font:{bold:true,sz:14},alignment:center}};
+  function cell(v,s){return {v,t:"s",s};}
+  function ncell(v,s){return {v,t:"n",s};}
 
-  // Linha 3: CPO título
-  ws["G3"]={v:"CPO - COMANDANTE PERMANÊNCIA ÀS OPERAÇÕES",t:"s",
-    s:{font:{bold:true,sz:11},alignment:center}};
+  // --- LINHA 1: Cabeçalho DECIR ---
+  ws["C1"]=cell(
+    `DECIR ${year}                                                                                                                                                                                                                    EMPENHAMENTO REFORÇADO DE NIVEL                                                                                                                                           BRAVO                    `,
+    {font:{sz:20,name:"Calibri"},alignment:{horizontal:"left",vertical:"center"}}
+  );
 
-  // Linha 5: Cabeçalhos colunas
-  ws["A5"]={v:"DIA",t:"s",s:{font:{bold:true,sz:11},alignment:center,border:allBorders}};
-  ws["B5"]={v:"CPO CSREPC DOURO",t:"s",s:{font:{bold:true,sz:11},fill:greenFill,alignment:center,border:allBorders}};
+  // --- LINHA 2: Autoridade + período ---
+  ws["A2"]=cell(
+    "AUTORIDADE NACIONAL DE EMERGÊNCIA E PROTEÇÃO CIVIL                                                                                                                                                                                 COMANDO SUB-REGIONAL DE EMERGÊNCIA E PROTEÇÃO CIVIL DO                                                                                                            DOURO",
+    {font:{bold:true,sz:10,name:"Calibri"},alignment:{wrapText:true,vertical:"center"}}
+  );
+  ws["G2"]=cell(`01 A ${dim} ${MESES_PT[month].toUpperCase()}`,
+    {font:{bold:true,sz:14,name:"Calibri"},alignment:{horizontal:"center",vertical:"center"}}
+  );
+
+  // --- LINHA 3: Título CPO ---
+  ws["G3"]=cell("CPO - COMANDANTE PERMANÊNCIA ÀS OPERAÇÕES",
+    {font:{bold:true,sz:11,name:"Calibri"},alignment:{horizontal:"center",vertical:"center"}}
+  );
+
+  // --- LINHA 5: Cabeçalhos ---
+  ws["A5"]=cell("DIA",{
+    font:{bold:true,sz:11,name:"Arial Black"},
+    fill:grayFill,
+    alignment:{horizontal:"center",vertical:"center",wrapText:true},
+    border:{top:medThin,bottom:medThin,left:medThin,right:medThin}
+  });
+  ws["B5"]=cell("CPO CSREPC DOURO",{
+    font:{bold:true,sz:11,name:"Arial Black"},
+    fill:greenFill,
+    alignment:{horizontal:"center",vertical:"center",wrapText:true},
+    border:{top:medThin,bottom:medThin,left:thinThin,right:thinThin}
+  });
   ["C","D","E","F","G","H"].forEach(c=>{
-    ws[c+"5"]={v:"CPO",t:"s",s:{font:{bold:true,sz:11},alignment:center,border:allBorders}};
+    ws[c+"5"]=cell("CPO",{
+      font:{bold:true,sz:11,name:"Arial Black"},
+      fill:grayFill,
+      alignment:{horizontal:"center",vertical:"center"},
+      border:{top:medThin,bottom:medThin,left:thinThin,right:thinThin}
+    });
   });
 
-  // Linhas dos dias
+  // --- LINHAS DOS DIAS ---
   const COLS=["B","C","D","E","F","G","H"];
   for(let d=1;d<=dim;d++){
     const row=d+5;
@@ -979,64 +1027,91 @@ function exportEscalaModelo(){
     const isWE=(dow===0||dow===6);
     const fill=isWE?yellowFill:null;
     const key=String(d);
-    const scheduled=DB.schedule[key]||[];
+    const scheduled=(DB.schedule[key]||[]);
 
-    ws["A"+row]={v:d,t:"n",s:{font:{bold:true,sz:11},alignment:center,border:allBorders,...(fill?{fill}:{})}};
-    COLS.forEach((col,i)=>{
-      const person=scheduled[i];
-      ws[col+row]={v:person?person.name:"",t:"s",
-        s:{font:{sz:11},alignment:wrap,border:allBorders,...(fill?{fill}:{})}};
+    // Coluna A - número do dia
+    ws["A"+row]=ncell(d,{
+      font:{bold:true,sz:11,name:"Calibri"},
+      alignment:{horizontal:"center",vertical:"center"},
+      border:{top:thinThin,bottom:hairThin,left:medThin,right:thinThin},
+      ...(fill?{fill}:{})
+    });
+
+    // Coluna B - CPO CSREPC DOURO (texto VERMELHO)
+    const pB=scheduled[0];
+    ws["B"+row]=cell(personCell(pB),{
+      font:{bold:true,sz:11,name:"Calibri",color:{rgb:"FFFF0000"}},
+      alignment:{wrapText:true,vertical:"center",horizontal:"center"},
+      border:{top:medThin,bottom:hairThin,left:medThin,right:hairThin},
+      ...(fill?{fill}:{})
+    });
+
+    // Colunas C-H (texto normal)
+    ["C","D","E","F","G","H"].forEach((col,i)=>{
+      const p=scheduled[i+1];
+      ws[col+row]=cell(personCell(p),{
+        font:{bold:true,sz:11,name:"Calibri"},
+        alignment:{wrapText:true,vertical:"center",horizontal:"center"},
+        border:{top:medThin,bottom:hairThin,left:hairThin,right:hairThin},
+        ...(fill?{fill}:{})
+      });
     });
   }
 
-  // Rodapé
+  // --- RODAPÉ ---
   const noteRow=dim+6;
-  ws["B"+noteRow]={v:"*CPO SALOC sem motorista",t:"s",s:{font:{bold:true,sz:11},fill:blueFill}};
-  ws["A"+(noteRow+3)]={v:"*HORÁRIOS:",t:"s",s:{font:{bold:true,sz:11}}};
-  ws["B"+(noteRow+3)]={v:"22H00 ÀS 22H00",t:"s",s:{font:{bold:true,sz:11},fill:yellowFill}};
-  ws["A"+(noteRow+4)]={v:"Legenda:",t:"s",s:{font:{bold:true,sz:11}}};
-  ws["B"+(noteRow+4)]={v:"FIM DE SEMANA",t:"s",s:{font:{bold:true,sz:11},fill:yellowFill}};
-  ws["B"+(noteRow+5)]={v:"Briefing CCOS (presencial)",t:"s",s:{font:{bold:true,sz:11}}};
-  ws["D"+(noteRow+5)]={v:"O Comandante Sub-Regional de Emergência e Proteção Civil",t:"s",s:{font:{sz:11}}};
-  ws["B"+(noteRow+6)]={v:"CPO CSREPC",t:"s",s:{font:{bold:true,sz:11},fill:greenFill}};
-  ws["D"+(noteRow+6)]={v:"Douro",t:"s",s:{font:{sz:11}}};
-  const hoje=new Date();
-  ws["B"+(noteRow+8)]={v:`Vila Real, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]} de ${hoje.getFullYear()}`,t:"s",s:{font:{bold:true,sz:11}}};
-  ws["D"+(noteRow+12)]={v:"(Miguel Fonseca)",t:"s",s:{font:{sz:11}}};
+  ws["B"+noteRow]    =cell("*CPO SALOC sem motorista",{font:{bold:true,sz:11,name:"Calibri"},fill:blueFill});
+  ws["A"+(noteRow+3)]=cell("*HORÁRIOS:   ",{font:{bold:true,sz:11,name:"Calibri"}});
+  ws["B"+(noteRow+3)]=cell("22H00 ÀS 22H00",{font:{bold:true,sz:11,name:"Calibri"},fill:yellowFill});
+  ws["A"+(noteRow+4)]=cell("Legenda:",{font:{bold:true,sz:11,name:"Calibri"}});
+  ws["B"+(noteRow+4)]=cell("FIM DE SEMANA",{font:{bold:true,sz:11,name:"Calibri"},fill:yellowFill});
+  ws["B"+(noteRow+5)]=cell("Briefing CCOS (presencial)",{font:{bold:true,sz:11,name:"Calibri"}});
+  ws["D"+(noteRow+5)]=cell("O Comandante Sub-Regional de Emergência e Proteção Civil",{font:{sz:11,name:"Calibri"}});
+  ws["B"+(noteRow+6)]=cell("CPO CSREPC",{font:{bold:true,sz:11,name:"Calibri"},fill:greenFill});
+  ws["D"+(noteRow+6)]=cell("Douro",{font:{sz:11,name:"Calibri"}});
+  ws["B"+(noteRow+8)]=cell(`Vila Real, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]} de ${hoje.getFullYear()}`,{font:{bold:true,sz:11,name:"Calibri"}});
+  ws["D"+(noteRow+12)]=cell("(Miguel Fonseca)",{font:{sz:11,name:"Calibri"}});
 
-  // Range
+  // --- RANGE ---
   ws["!ref"]=`A1:S${noteRow+14}`;
 
-  // Merges
+  // --- MERGES ---
   ws["!merges"]=[
-    {s:{r:1,c:0},e:{r:2,c:2}},   // A2:C3
-    {s:{r:0,c:2},e:{r:0,c:5}},   // C1:F1
-    {s:{r:1,c:6},e:{r:1,c:7}},   // G2:H2
-    {s:{r:2,c:6},e:{r:2,c:7}},   // G3:H3
-    {s:{r:noteRow-1,c:1},e:{r:noteRow,c:1}}, // B36:B37
-    {s:{r:noteRow+4,c:3},e:{r:noteRow+4,c:4}}, // D41:E41
-    {s:{r:noteRow+5,c:3},e:{r:noteRow+5,c:4}}, // D42:E42
-    {s:{r:noteRow+11,c:3},e:{r:noteRow+11,c:4}} // D48:E48
+    {s:{r:1,c:0},e:{r:2,c:2}},
+    {s:{r:0,c:2},e:{r:0,c:5}},
+    {s:{r:1,c:6},e:{r:1,c:7}},
+    {s:{r:2,c:6},e:{r:2,c:7}},
+    {s:{r:noteRow-1,c:1},e:{r:noteRow,c:1}},
+    {s:{r:noteRow+4,c:3},e:{r:noteRow+4,c:4}},
+    {s:{r:noteRow+5,c:3},e:{r:noteRow+5,c:4}},
+    {s:{r:noteRow+11,c:3},e:{r:noteRow+11,c:4}}
   ];
 
-  // Larguras das colunas
+  // --- LARGURAS DAS COLUNAS (exatas do original) ---
   ws["!cols"]=[
-    {wch:8},  // A DIA
-    {wch:30}, // B CPO CSREPC DOURO
-    {wch:18}, // C
-    {wch:18}, // D
-    {wch:18}, // E
-    {wch:18}, // F
-    {wch:18}, // G
-    {wch:18}, // H
+    {wch:13.43}, // A - DIA
+    {wch:47.71}, // B - CPO CSREPC DOURO
+    {wch:18},    // C
+    {wch:18},    // D
+    {wch:18},    // E
+    {wch:18},    // F
+    {wch:18},    // G
+    {wch:18},    // H
+    {wch:4.71},  // I (oculta como no original)
   ];
 
-  // Alturas das linhas
-  const rows=[{hpt:127.5},{hpt:27},{hpt:26.25},{hpt:7.5},{hpt:30}];
-  for(let i=0;i<dim;i++)rows.push({hpt:35.1});
-  ws["!rows"]=rows;
+  // --- ALTURAS DAS LINHAS (exatas do original) ---
+  const rowH=[
+    {hpt:127.5}, // 1
+    {hpt:27},    // 2
+    {hpt:26.25}, // 3
+    {hpt:7.5},   // 4
+    {hpt:30},    // 5 cabeçalhos
+  ];
+  for(let i=0;i<dim;i++) rowH.push({hpt:35.1});
+  ws["!rows"]=rowH;
 
-  XLSX.utils.book_append_sheet(wb,ws,"Escala CPO");
+  XLSX.utils.book_append_sheet(wb,ws,"Escala");
   XLSX.writeFile(wb,`EscalaCPO_Modelo_${MESES[month]}_${year}.xlsx`,{cellStyles:true});
   toast("Modelo oficial exportado!");
 }
